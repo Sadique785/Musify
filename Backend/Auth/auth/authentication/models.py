@@ -2,6 +2,15 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
 import uuid
+from django.conf import settings
+
+
+STATUS_CHOICES = (
+    ('send', 'Sent'),
+    ('accepted', 'Accepted'),
+)
+
+
 
 class CustomUserManager(BaseUserManager):
     use_in_migrations = True
@@ -92,3 +101,34 @@ class UserRole(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.role.name}"
+
+
+class Profile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL,on_delete=models.CASCADE, related_name='user_profile')
+    is_online = models.BooleanField(default=False)
+    following = models.ManyToManyField('self', related_name='followers', symmetrical=False, blank=True )
+    friends = models.ManyToManyField('self', related_name='friends', symmetrical=True, blank=True )
+    blocked_users = models.ManyToManyField('self', related_name='blocked_by', symmetrical=False, blank=True)
+    bio = models.CharField(default='', blank=True, null=True, max_length=350)
+    date_of_birth = models.CharField(blank=True, max_length=150)
+    image = models.ImageField(default='default.jpg', upload_to='profile_pics', blank=True, null=True)
+    
+    def get_friends(self):
+        return self.friends.all()
+    
+    def get_friends_no(self):
+        return self.friends.all().count()
+    
+    def __str__(self):
+        return f'{self.user.username} Profile' 
+
+
+class Relationship(models.Model):
+    sender = models.ForeignKey('Profile', on_delete=models.CASCADE, related_name='friend_sender')
+    receiver = models.ForeignKey('Profile', on_delete=models.CASCADE, related_name='friend_receiver')
+    status = models.CharField(max_length=8, choices=STATUS_CHOICES)
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)   
+
+    def __str__(self):
+        return f"{self.sender.user.username} -> {self.receiver.user.username} ({self.status})"
