@@ -3,11 +3,29 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
 from authentication.models import CustomUser, Profile
-from .serializers import UserRegisterSerializer, VerifyEmailSerializer
+from .serializers import UserRegisterSerializer, VerifyEmailSerializer, UserLoginSerializer
 from authentication.api.services.send_otp import send_otp
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
+from django.conf import settings
+from django.middleware import csrf
+from django.views.decorators.csrf import csrf_protect
 
 
 # Create your views here.
+
+
+def generate_token_with_claims(user):
+    refresh = RefreshToken.for_user(user)
+    
+    # Custom Claims
+    refresh["username"] = str(user.username)
+    refresh['isAdmin'] = user.is_superuser
+
+    return {
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+    }
 
 
 
@@ -88,3 +106,59 @@ class VerifyOtp(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+
+
+class LoginView(APIView):
+    def post(self, request):
+        serializer = UserLoginSerializer(data=request.data)
+
+        if serializer.is_valid():
+            user = serializer.validated_data['user']
+            if user.is_active:
+                tokens = generate_token_with_claims(user)
+                response = Response()
+
+                response.set_cookie(
+                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
+                value=tokens["access"],
+                expires=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
+                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+                )
+                csrf.get_token(request)
+                response.data = {"Sucess": "Login successfully", "data": tokens}
+                print(response)
+                return response
+            else:
+                return Response({"error": "This account is not active"}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        
+
+
+
+
+
+class LogoutView(APIView):
+    def post(self, request):
+        try:
+            print(settings.SIMPLE_JWT['AUTH_COOKIE'])
+
+            refresh_token = request.data.get("refresh_token")
+
+
+            if refresh_token is None:
+                return Response({"error": "Refresh token not provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+
+            response = Response({"message": "Logged out Successfully"}, status=status.HTTP_200_OK)
+            response.delete_cookie(key=settings.SIMPLE_JWT['AUTH_COOKIE'])
+
+            return response
+        
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

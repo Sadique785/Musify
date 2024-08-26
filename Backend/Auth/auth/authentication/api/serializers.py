@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from ..models import CustomUser, Role, UserRole
 from django.contrib.auth.hashers import make_password
+from django.contrib.auth import authenticate
 
 
 
@@ -49,3 +50,39 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 class VerifyEmailSerializer(serializers.Serializer):
      email = serializers.EmailField()
      otp = serializers.CharField()
+
+
+
+
+class UserLoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        email = data.get('email').strip()
+        password = data.get('password').strip()
+
+        if not email or not password:  
+            raise serializers.ValidationError('Both email and password are required')
+
+        user = CustomUser.objects.filter(email=email).first()  
+
+        if not user:
+            raise serializers.ValidationError('Invalid email address')
+
+        if not user.is_active:
+            raise serializers.ValidationError('User account is inactive')
+
+        user = authenticate(username=email, password=password)
+        if user is None:
+            raise serializers.ValidationError('Invalid password')
+
+        if not user.email_verified:
+            raise serializers.ValidationError('Email address not verified.')
+
+        data['user'] = user
+        return data
+
+            
+               
+        
