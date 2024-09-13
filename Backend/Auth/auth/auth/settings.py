@@ -65,12 +65,32 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+SESSION_COOKIE_NAME = 'sessionid'  # Default name for the session cookie
+SESSION_COOKIE_DOMAIN = None  # Domain for which the cookie is valid
+SESSION_COOKIE_PATH = '/'  # Path for which the cookie is valid
+SESSION_COOKIE_SECURE = False  # Should be True if using HTTPS
+SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access
+SESSION_COOKIE_SAMESITE = 'Lax'
+
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "http://localhost:5173",
+]
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:5173',  # Add your frontend origin here
 ]
 
 
 CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
 
 REST_FRAMEWORK = {
   'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -81,8 +101,9 @@ REST_FRAMEWORK = {
 
 from datetime import timedelta
 SIMPLE_JWT = {
-  'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+  'ACCESS_TOKEN_LIFETIME': timedelta(minutes=1),
   'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+#   'REFRESH_TOKEN_LIFETIME': timedelta(minutes=5),
   'ROTATE_REFRESH_TOKENS': False,
   'BLACKLIST_AFTER_ROTATION': True,
   'UPDATE_LAST_LOGIN': False,
@@ -110,7 +131,8 @@ SIMPLE_JWT = {
   'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 
 
-  'AUTH_COOKIE': 'access_token',  
+  'AUTH_COOKIE': 'access_token', 
+  'AUTH_COOKIE_REFRESH': 'refresh_token', 
   'AUTH_COOKIE_DOMAIN': None,     
   'AUTH_COOKIE_SECURE': False,    
   'AUTH_COOKIE_HTTP_ONLY' : True, 

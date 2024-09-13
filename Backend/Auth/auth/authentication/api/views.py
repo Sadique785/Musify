@@ -6,10 +6,16 @@ from authentication.models import CustomUser, Profile
 from .serializers import UserRegisterSerializer, VerifyEmailSerializer, UserLoginSerializer
 from authentication.api.services.send_otp import send_otp
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from django.conf import settings
 from django.middleware import csrf
-from django.views.decorators.csrf import csrf_protect
+from django.contrib.auth import logout
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie 
+from rest_framework.permissions import AllowAny
+from datetime import datetime, timezone
+
+
 
 
 # Create your views here.
@@ -44,6 +50,10 @@ class RegisterView(APIView):
             request.session['email_otp'] = otp
             request.session['email_for_otp'] = email
             request.session['user_data'] = serializer.validated_data
+            request.session.save()
+            print("Session ID:", request.session.session_key)
+
+
 
             content = {"message": "An OTP has been sent to your email"}
             return Response(content, status=status.HTTP_201_CREATED)
@@ -66,18 +76,22 @@ class VerifyOtp(APIView):
     def post(self, request):
         serializer = VerifyEmailSerializer(data = request.data)
         if serializer.is_valid():
+            print("Session ID:", request.session.session_key)
+
             email = serializer.validated_data.get("email")
             otp = serializer.validated_data.get("otp")
 
             print('Send by user', email, otp)
-            print(type(otp))
+            
 
-
+            print("OTP in session:", request.session.get('email_otp'))
+            print("Email in session:", request.session.get('email_for_otp'))
+            print("User data in session:", request.session.get('user_data'))
             session_otp = request.session.get('email_otp')
             session_email = request.session.get('email_for_otp')
 
             print('Session', session_email, session_otp)
-            print(type(session_otp))
+            print('Send', email, otp)
 
 
             if session_email != email:
@@ -116,7 +130,22 @@ class LoginView(APIView):
             user = serializer.validated_data['user']
             if user.is_active:
                 tokens = generate_token_with_claims(user)
-                response = Response()
+                response_data = {
+                    "success":True,
+                    "message":"Login Successful",
+                    "data":{
+                        "accessToken": tokens["access"],
+                        "refreshToken": tokens["refresh"],
+                        "user":{
+                            "id":user.id,
+                            "username":user.username,
+                            "email":user.email,
+                            "isActive":user.is_active,
+                        }
+                    }
+
+                }
+                response = Response(response_data)
 
                 response.set_cookie(
                 key=settings.SIMPLE_JWT['AUTH_COOKIE'],
@@ -126,14 +155,81 @@ class LoginView(APIView):
                 httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
                 samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
                 )
+
+                response.set_cookie(
+                    key='refresh_token',  
+                    value=tokens["refresh"],
+                    expires=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
+                    secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                    httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+                    samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+                )
                 csrf.get_token(request)
-                response.data = {"Sucess": "Login successfully", "data": tokens}
-                print(response)
+                
+                
                 return response
             else:
                 return Response({"error": "This account is not active"}, status=status.HTTP_404_NOT_FOUND)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class TokenRefresherView(APIView):
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    @method_decorator(ensure_csrf_cookie)
+    def post(self, request, *args, **kwargs):
+
+        print("reached hereeeee")
+        
+
+        refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
+
+        if not refresh_token:
+            return Response({'detail': 'Refresh token not provided.'}, status=status.HTTP_401)
+        
+
+        try:
+            token = RefreshToken(refresh_token)
+
+            if token['exp'] < datetime.now(tz=timezone.utc).timestamp():
+                return Response({'detail': 'Refresh token expired'}, status=status.HTTP_401)
+
+
+
+            new_access_token = str(token.access_token)
+
+            response = Response({"access":new_access_token, 'refresh':str(token)}, status=status.HTTP_200_OK)
+
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
+                value=new_access_token,
+                expires=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
+                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+            )
+
+            response.set_cookie(
+                key='refresh_token',
+                value=str(token),
+                expires=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
+                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+            )
+
+            print(new_access_token, 'This is the new access token')
+
+            return response
+
+        except (TokenError, InvalidToken) as e :
+            return Response({"detail": "Invalid or expired refresh token."}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+
 
         
 
@@ -142,23 +238,43 @@ class LoginView(APIView):
 
 
 class LogoutView(APIView):
+
+    authentication_classes = []  
+    permission_classes = []  
+
     def post(self, request):
-        try:
-            print(settings.SIMPLE_JWT['AUTH_COOKIE'])
+        print('reached here')
+        try:            
+            refresh_token = request.COOKIES.get('refresh_token')
+            print(f"Refresh token: {refresh_token}")
 
-            refresh_token = request.data.get("refresh_token")
+            if refresh_token:
+                try:
+                    
+                    token = RefreshToken(refresh_token)
+                    print(f"Token before blacklisting: {token}")
+                    token.blacklist()
+                except TokenError as e:
+                    print(f"Token error (invalid or expired): {str(e)}")
 
+            logout(request)
 
-            if refresh_token is None:
-                return Response({"error": "Refresh token not provided"}, status=status.HTTP_400_BAD_REQUEST)
-
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-
-            response = Response({"message": "Logged out Successfully"}, status=status.HTTP_200_OK)
+            response = Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
             response.delete_cookie(key=settings.SIMPLE_JWT['AUTH_COOKIE'])
+            response.delete_cookie(key='refresh_token')
+            print('Successfully logged out and cleared cookies')
 
             return response
         
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+class EditProfileView(APIView):
+
+    def put(self, request):
+        print("Received a request for profile update.") 
+
+        return Response({"message": "Request received successfully!"}, status=status.HTTP_200_OK)

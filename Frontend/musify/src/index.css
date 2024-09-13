@@ -1,0 +1,54 @@
+@import '../node_modules/slick-carousel/slick/slick.css';
+@import '../node_modules/slick-carousel/slick/slick-theme.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+
+.text-gradient {
+    background: linear-gradient(90deg, #BF7474, #e6d5d5);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.text-gradient-2 {
+    background: linear-gradient(90deg, #380E0D, #BF7474);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+html {
+    scroll-behavior: smooth;
+  }
+.custom-gradient {
+    background: linear-gradient(
+        to bottom, 
+        #731C1B 13vh,  /* First color takes 20vh of the viewport height */
+        #090B07 24vh,  /* Second color takes 30vh */
+        #000000 50vh   /* Third color takes the remaining 50vh */
+      );
+}
+
+.custom-gradient-2 {
+    background: linear-gradient(
+        to bottom,
+        #380E0D 7%,
+        #731C1B 38%,
+        #000000 100%
+    );
+}
+
+.btn-size{
+    width: 220px;
+    height: auto;
+}
+.feed-container {
+    margin-top: 80px; /* Adjust based on the header height */
+  }
+
+.reverse-container{
+    margin-top: -80px;
+}
+

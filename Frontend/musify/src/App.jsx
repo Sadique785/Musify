@@ -8,6 +8,7 @@ import './App.css';
 function App() {
     return (
         <Router>
+             
             <Routes>
                 {/* Public and User Routes */}
                 <Route path="/*" element={<PublicRoutes />} />

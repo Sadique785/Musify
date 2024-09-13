@@ -1,10 +1,27 @@
 import React from 'react'
+import Header from '../../components/Public/navbars/Header'
+import GetStarted from '../../components/Home/GetStarted'
+import GoogleAuth from '../../components/Home/GoogleAuth'
+import Mastering from '../../components/Home/Mastering'
+import Review from '../../components/Home/Review'
+import Footer from '../../components/Public/footers/Footer'
+
+
+
+
 
 function Home() {
   return (
-    <div>
-                <h1>Home Section</h1>
-                <p>Hey this is Home part</p>
+    <div className='flex flex-col snap-y snap-mandatory  '>
+
+          <Header />
+          <GetStarted />
+          <GoogleAuth />
+          <Mastering />
+          <Review />
+          <Footer />
+
+
     </div>
   )
 }

@@ -19,22 +19,22 @@ class CustomAuthentication(JWTAuthentication):
 
     def authenticate(self, request: Request) -> Union[Tuple[object, AccessToken], None]:
         """Override the authenticate method to add CSRF checks."""
-        # Get the token from the header or cookie
+
+        jwt_bypass_paths = ['/login','/register',  '/home', '/forgot-password']
+        
+        if request.path in jwt_bypass_paths:
+            return None  
         header = self.get_header(request)
         if header is None:
             raw_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE']) or None
         else:
             raw_token = self.get_raw_token(header)
 
-        # If no token is found, return None
         if raw_token is None:
             return None
 
-        # Validate the token
         validated_token = self.get_validated_token(raw_token)
 
-        # Enforce CSRF check
         enforce_csrf(request)
 
-        # Return the user and the validated token
         return self.get_user(validated_token), validated_token

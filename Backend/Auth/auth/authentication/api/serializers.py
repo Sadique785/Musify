@@ -39,6 +39,18 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         Hash the password before storing it in the session.
         """
         return make_password(value)
+    
+    
+    def validate_email(self, value):
+        if CustomUser.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email already exists.")
+        return value
+    
+    def validate_username(self, value):
+        
+        if CustomUser.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Username already exists.")
+        return value
 
     def validate(self, data):
         """
