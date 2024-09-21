@@ -8,7 +8,8 @@ import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../../redux/auth/Slices/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import toast, { Toaster } from 'react-hot-toast';
+import { toast, Toaster } from 'react-hot-toast';
+import { useGoogleLogin } from '@react-oauth/google';
 
 
 
@@ -18,6 +19,7 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -25,11 +27,51 @@ function Login() {
   const acc = useSelector((state) => state.auth.accessToken);
   console.log(acc, 'acc');
   
-
-
-
+  const login = useGoogleLogin({
+    onSuccess: async tokenResponse => {
+      console.log(tokenResponse)
+      const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: {
+          Authorization: `Bearer ${tokenResponse.access_token}`,
+        },
+      });
   
+      const userData = await userInfo.json();
+      console.log(userData, 'userdata');
 
+      userData.mob = '';
+
+      try {
+        const response = await axiosInstance.post('/auth/google-login/', userData);
+        
+        if (response.status === 200) {
+          const { accessToken, refreshToken, user } = response.data.data;
+          dispatch(loginSuccess({
+            user,
+            accessToken,
+            refreshToken,
+          }));
+  
+          // Redirect after successful login
+          setTimeout(() => {
+            navigate('/feed');
+          }, 2000);
+        }
+      } catch (error) {
+        console.error('Error during login:', error);
+        if (error.response && error.response.data) {
+          const nonFieldErrors = error.response.data.non_field_errors;
+          if (nonFieldErrors && nonFieldErrors.length > 0) {
+            toast.error(nonFieldErrors[0]);
+          }
+          // Handle other errors as needed
+        } else {
+          toast.error('An error occurred. Please try again.');
+        }
+      }
+      
+    }
+  });
 
 
   const togglePassword = () => {
@@ -198,7 +240,7 @@ function Login() {
             </div>
 
             <div className="flex justify-center">
-              <button type="button" className="w-[100px] h-[45px] bg-gray-100 text-black border-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 hover:border-gray-500 transition mb-4">
+              <button onClick={() => login()} type="button" className="w-[100px] h-[45px] bg-gray-100 text-black border-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 hover:border-gray-500 transition mb-4">
                 <FcGoogle className="h-7 w-7" />
               </button>
             </div>

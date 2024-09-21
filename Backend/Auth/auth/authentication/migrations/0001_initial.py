@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Role',
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
+                ('id', models.AutoField(primary_key=True, serialize=False)),
                 ('name', models.CharField(max_length=255, unique=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
             name='CustomUser',
             fields=[
                 ('is_superuser', models.BooleanField(default=False, help_text='Designates that this user has all permissions without explicitly assigning them.', verbose_name='superuser status')),
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
+                ('id', models.AutoField(primary_key=True, serialize=False)),
                 ('username', models.CharField(max_length=255, unique=True)),
                 ('email', models.EmailField(max_length=255, unique=True)),
                 ('password', models.CharField(max_length=128)),

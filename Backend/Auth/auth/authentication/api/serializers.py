@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import CustomUser, Role, UserRole
+from ..models import CustomUser, Role, UserRole, Profile, Talent, Genre
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate
 
@@ -94,7 +94,67 @@ class UserLoginSerializer(serializers.Serializer):
 
         data['user'] = user
         return data
+    
 
-            
-               
+
+class ProfileImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['user', 'image']
+
+class ProfileSerializer(serializers.ModelSerializer):
+    talents = serializers.SerializerMethodField()
+    genres = serializers.SerializerMethodField()
+    username = serializers.CharField(source='user.username', write_only=True)   
+
+    class Meta:
+        model = Profile
+        fields = ['username', 'location', 'date_of_birth', 'gender', 'talents', 'genres', 'bio']  # Ensure 'username' is included
+
+    def get_talents(self, obj):
+        return [talent.name for talent in obj.talents.all()]
+
+    def get_genres(self, obj):
+        return [genre.name for genre in obj.genres.all()]
+
+    def update(self, instance, validated_data):
+        print(validated_data, 'Validated Data')
+        # Extract username and update user
+        username = validated_data.pop('user', {}).get('username')
+        if username:
+            instance.user.username = username
+            instance.user.save()
+
+
+        instance.location = validated_data.get('location', instance.location)
+        instance.date_of_birth = validated_data.get('date_of_birth', instance.date_of_birth)
+        instance.gender = validated_data.get('gender', instance.gender)
+        instance.bio = validated_data.get('bio', instance.bio)
         
+        # Process talents
+        talent_names = validated_data.pop('talents', [])
+        talents = [Talent.objects.get_or_create(name=name)[0] for name in talent_names]
+        instance.talents.set(talents)
+
+        # Process genres
+        genre_names = validated_data.pop('genres', [])
+        genres = [Genre.objects.get_or_create(name=name)[0] for name in genre_names]
+        instance.genres.set(genres)
+
+        # Update other fields
+        # for attr, value in validated_data.items():
+        #     setattr(instance, attr, value)
+        
+        instance.save()
+        return instance
+
+
+class GoogleLoginSerializer(serializers.Serializer):
+    access_token = serializers.CharField()
+
+    def validate_access_token(self, value):
+        if not value:
+            raise serializers.ValidationError("Access token is required.")
+        return value
+
+    

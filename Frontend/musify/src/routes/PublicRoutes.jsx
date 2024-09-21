@@ -11,16 +11,22 @@ import UserWrapper from "../Wrappers/UserWrapper";
 import Explore from "../pages/User/Explore";
 import Library from "../pages/User/Library";
 import Settings from "../pages/User/Settings";
+import NotFound from "../components/Public/NotFound";
+import { Toaster } from "react-hot-toast";
 
 
-const isAuthenticated = () => {
-    return false;  
-};
+
+
+
 
 function PublicRoutes() {
 
     
     return (
+
+        <>
+        <Toaster />
+        
         <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
@@ -44,10 +50,13 @@ function PublicRoutes() {
             {/* <Route element={<UserWrapper includeHeader={false} />}>
                 <Route path="/some-page" element={<SomePage />} />
                 <Route path="/another-page" element={<AnotherPage />} />
-            </Route> */}
+                </Route> */}
+
+            <Route path="*" element={<NotFound />} /> {/* Wildcard route for 404 */}
 
 
         </Routes>
+                </>
     );
 }
 

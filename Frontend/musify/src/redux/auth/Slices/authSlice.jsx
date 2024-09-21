@@ -5,6 +5,7 @@ const initialState = {
   accessToken: null,
   refreshToken: null,
   isAuthenticated: false,
+  isSuperuser: false,  
 };
 
 const authSlice = createSlice({
@@ -16,15 +17,20 @@ const authSlice = createSlice({
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
       state.isAuthenticated = true;
+      state.isSuperuser = action.payload.user.isSuperuser || false;  
     },
     logout: (state) => {
       state.user = null;
       state.accessToken = null;
       state.refreshToken = null;
       state.isAuthenticated = false;
+      state.isSuperuser = false; 
+    },
+    setAdminStatus: (state, action) => {
+      state.isSuperuser = action.payload.isSuperuser;  // Dispatch to change admin status manually
     },
   },
 });
 
-export const { loginSuccess, logout } = authSlice.actions;
+export const { loginSuccess, logout, setAdminStatus } = authSlice.actions;
 export default authSlice.reducer;

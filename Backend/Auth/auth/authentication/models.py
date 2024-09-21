@@ -43,9 +43,10 @@ class CustomUserManager(BaseUserManager):
             raise ValueError('Superuser must have is_superuser=True.')
 
         return self.create_user(username, email, password, **extra_fields)
+    
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    id = models.AutoField(primary_key=True)
     username = models.CharField(max_length=255, unique=True)
     email = models.EmailField(max_length=255, unique=True)
     password = models.CharField(max_length=128)  # Storing hashed password
@@ -82,7 +83,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     )
 
 class Role(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -103,8 +104,24 @@ class UserRole(models.Model):
         return f"{self.user.username} - {self.role.name}"
 
 
+class Talent(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+    
+
+class Genre(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Profile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL,on_delete=models.CASCADE, related_name='user_profile')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='user_profile', to_field='id')
+    name = models.CharField(max_length=255, default='your name')
+    location = models.CharField(max_length=255, default='city')
     is_online = models.BooleanField(default=False)
     following = models.ManyToManyField('self', related_name='followers', symmetrical=False, blank=True )
     friends = models.ManyToManyField('self', related_name='friends', symmetrical=True, blank=True )
@@ -112,6 +129,9 @@ class Profile(models.Model):
     bio = models.CharField(default='', blank=True, null=True, max_length=350)
     date_of_birth = models.CharField(blank=True, max_length=150)
     image = models.ImageField(default='default.jpg', upload_to='profile_pics', blank=True, null=True)
+    gender = models.CharField(max_length=50, blank=True)
+    talents = models.ManyToManyField(Talent, related_name='profiles_with_talent', blank=True)
+    genres = models.ManyToManyField(Genre, related_name='profiles_with_genre', blank=True)
     
     def get_friends(self):
         return self.friends.all()

@@ -12,6 +12,7 @@ import { persistor } from '../../../redux/auth/userStore';
 function SettingsLeft() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const user = useSelector((state)=> state.auth.user)
     const selectedSettings = useSelector((state) => state.settings.selectedSettings);
 
     const handleSettingsChange = (settings) => {
@@ -47,6 +48,11 @@ function SettingsLeft() {
         console.log('Logout triggered');
     };
 
+    const handleProfile = (e) => {
+        
+        navigate('/profile')
+    }
+
     const buttonClass = "flex items-center space-x-3 p-2 mb-2 rounded-lg transition";
 
     return (
@@ -56,9 +62,9 @@ function SettingsLeft() {
                 <div className="bg-gray-300 p-2 rounded-full">
                     <FaUser className="text-gray-700 text-xl" />
                 </div>
-                <div className="ml-3">
+                <div className="ml-3" >
                     <h3 className="font-bold text-gray-600">Username</h3>
-                    <p className="text-xs text-gray-600 cursor-pointer">Go back to profile</p>
+                    <p className="text-xs text-gray-600 cursor-pointer" onClick={handleProfile}>Go back to profile</p>
                 </div>
             </div>
 

@@ -9,6 +9,8 @@ import { persistor } from '../redux/auth/userStore';
 // Function to decode a JWT token
 export const decodeToken = (token) => {
     try {
+        console.log(token);
+        
         return jwtDecode(token);
     } catch (error) {
         console.error('Error decoding token:', error);

@@ -4,6 +4,7 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import axios from "axios";
+import toast from 'react-hot-toast'
 
 function Signup() {
     const [email, setEmail] = useState("");
@@ -116,7 +117,7 @@ function Signup() {
 
             if (response.status === 200) {
                 
-                alert("OTP verified . You can login now!");
+                toast.success("OTP verified . You can login now!");
                 navigate('/login')
             }
         } catch (error) {
