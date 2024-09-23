@@ -128,7 +128,7 @@ class Profile(models.Model):
     blocked_users = models.ManyToManyField('self', related_name='blocked_by', symmetrical=False, blank=True)
     bio = models.CharField(default='', blank=True, null=True, max_length=350)
     date_of_birth = models.CharField(blank=True, max_length=150)
-    image = models.ImageField(default='default.jpg', upload_to='profile_pics', blank=True, null=True)
+    image = models.ImageField(default='profile_pics/default.png', upload_to='profile_pics', blank=True, null=True)
     gender = models.CharField(max_length=50, blank=True)
     talents = models.ManyToManyField(Talent, related_name='profiles_with_talent', blank=True)
     genres = models.ManyToManyField(Genre, related_name='profiles_with_genre', blank=True)

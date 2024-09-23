@@ -1,20 +1,22 @@
-from django.shortcuts import get_object_or_404, render
-from rest_framework.views import APIView
-from rest_framework import status
-from rest_framework.response import Response
-from authentication.models import CustomUser, Profile, Talent, Genre
-from .serializers import UserRegisterSerializer, VerifyEmailSerializer, UserLoginSerializer, ProfileImageSerializer, ProfileSerializer, GoogleLoginSerializer
-from authentication.api.services.send_otp import send_otp
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+
+import requests
 from django.conf import settings
+from rest_framework import status
 from django.middleware import csrf
 from django.contrib.auth import logout
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import ensure_csrf_cookie 
-from rest_framework.permissions import AllowAny
 from datetime import datetime, timezone
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from django.utils.decorators import method_decorator
+from django.shortcuts import get_object_or_404, render
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from authentication.api.services.send_otp import send_otp
+from django.views.decorators.csrf import ensure_csrf_cookie 
+from authentication.models import CustomUser, Profile, Talent, Genre
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+from .serializers import UserRegisterSerializer, VerifyEmailSerializer, UserLoginSerializer, ProfileImageSerializer, ProfileSerializer, GoogleLoginSerializer
 
 
 
@@ -176,6 +178,93 @@ class LoginView(APIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
+        
+class GoogleLoginView(APIView):
+    def post(self, request):
+        print(request.data)
+        serializer = GoogleLoginSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            # Get the access token from the validated data
+            access_token = serializer.validated_data['access_token']
+            user_info_url = 'https://www.googleapis.com/oauth2/v3/userinfo'
+            print('reached here')
+            print(access_token, 'Token here')
+            
+            # Fetch user info from Google
+            response = requests.get(user_info_url, headers={'Authorization': f'Bearer {access_token}'})
+            if response.status_code != 200:
+                print('errror')
+                return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            user_data = response.json()
+            print(user_data, "Userdata received")
+            email = user_data.get('email')
+
+            user, created = CustomUser.objects.get_or_create(email=email, defaults={
+                'username': email.split('@')[0],
+                'is_active': True,
+            })
+
+
+            if created:
+
+                Profile.objects.create(user=user)
+
+            print(user, 'userhere')
+
+            tokens = generate_token_with_claims(user)
+            print(tokens)
+
+         
+            response_data = {
+                "success": True,
+                "message": "Login Successful",
+                "data": {
+                    "accessToken": tokens["access"],
+                    "refreshToken": tokens["refresh"],
+                    "user": {
+                        "id": user.id,
+                        "username": user.username,
+                        "email": user.email,
+                        "isActive": user.is_active,
+                    }
+                }
+            }
+            
+            response = Response(response_data)
+
+            # Set the cookies
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
+                value=tokens["access"],
+                expires=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
+                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+            )
+
+            response.set_cookie(
+                key='refresh_token',
+                value=tokens["refresh"],
+                expires=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
+                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+            )
+            csrf_token = csrf.get_token(request)
+            response.set_cookie(
+                key='csrftoken',
+                value=csrf_token,
+                httponly=False,  
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+            )
+
+            return response
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+
 
 class TokenRefresherView(APIView):
 
@@ -278,7 +367,9 @@ class FetchProfileView(APIView):
 
     def get(self, request):
         try:
+            print(request.user)
             profile = Profile.objects.get(user=request.user)
+            print(profile)
             response_data = {
                 'username': profile.user.username,
                 'image_url': profile.image.url if profile.image else None,
@@ -288,6 +379,7 @@ class FetchProfileView(APIView):
                 'talents': [talent.name for talent in profile.talents.all()],
                 'genres': [genre.name for genre in profile.genres.all()],
             }
+            print(response_data)
             return Response(response_data, status=status.HTTP_200_OK)
         except Profile.DoesNotExist:
             return Response({"error": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -331,70 +423,5 @@ class ChangeProfileImageView(APIView):
         return Response({"error": "No image provided"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-import requests
 
 
-class GoogleLoginView(APIView):
-    def post(self, request):
-        serializer = GoogleLoginSerializer(data=request.data)
-        
-        if serializer.is_valid():
-            # Get the access token from the validated data
-            access_token = serializer.validated_data['access_token']
-            user_info_url = 'https://www.googleapis.com/oauth2/v3/userinfo'
-            
-            # Fetch user info from Google
-            response = requests.get(user_info_url, headers={'Authorization': f'Bearer {access_token}'})
-            if response.status_code != 200:
-                return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
-            
-            user_data = response.json()
-            email = user_data.get('email')
-
-            user, created = CustomUser.objects.get_or_create(email=email, defaults={
-                'username': email.split('@')[0],
-                'is_active': True,
-            })
-
-            tokens = generate_token_with_claims(user)
-
-         
-            response_data = {
-                "success": True,
-                "message": "Login Successful",
-                "data": {
-                    "accessToken": tokens["access"],
-                    "refreshToken": tokens["refresh"],
-                    "user": {
-                        "id": user.id,
-                        "username": user.username,
-                        "email": user.email,
-                        "isActive": user.is_active,
-                    }
-                }
-            }
-            
-            response = Response(response_data)
-
-            # Set the cookies
-            response.set_cookie(
-                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
-                value=tokens["access"],
-                expires=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
-                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
-                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
-            )
-
-            response.set_cookie(
-                key='refresh_token',
-                value=tokens["refresh"],
-                expires=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
-                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
-                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
-            )
-
-            return response
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -59,10 +59,21 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         return data
     
 
+    
+
+
 class VerifyEmailSerializer(serializers.Serializer):
      email = serializers.EmailField()
      otp = serializers.CharField()
 
+class GoogleLoginSerializer(serializers.Serializer):
+    access_token = serializers.CharField()
+    print(access_token)
+
+    def validate_access_token(self, value):
+        if not value:
+            raise serializers.ValidationError("Access token is required.")
+        return value
 
 
 
@@ -149,12 +160,5 @@ class ProfileSerializer(serializers.ModelSerializer):
         return instance
 
 
-class GoogleLoginSerializer(serializers.Serializer):
-    access_token = serializers.CharField()
-
-    def validate_access_token(self, value):
-        if not value:
-            raise serializers.ValidationError("Access token is required.")
-        return value
 
     
