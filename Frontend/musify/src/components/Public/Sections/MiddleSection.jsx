@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { useLocation } from 'react-router-dom';
 import LibMid from '../Library/LibMid';
 import FeedMid from '../Feed/FeedMid';
@@ -10,11 +10,12 @@ function MiddleSection() {
   const isLibraryPage = location.pathname.includes('/library');
   const isProfile = location.pathname.includes('/profile');
 
+
   return (
     <div className="w-2/4 p-4 feed-container bg-white">
       {isFeedPage && <FeedMid />}
       {isLibraryPage && <LibMid />}
-      {isProfile && <ProfileMid />}
+      {isProfile && <ProfileMid  />}
     </div>
   );
 }

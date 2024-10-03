@@ -6,6 +6,9 @@ import genres from "../../Elements/Genres";
 import toast, { Toaster } from 'react-hot-toast';
 
 function RightProfile() {
+
+
+    const backendUrl = import.meta.env.VITE_BACKEND_URL
     const [profile, setProfile] = useState({
         username: "",
         imageUrl: "",
@@ -65,8 +68,6 @@ function RightProfile() {
             return newProfile;
         });
     };
-
-    // const handleGender = (gender)
     
     
 
@@ -78,6 +79,7 @@ function RightProfile() {
             try {
                 const response = await axiosInstance.get("/auth/fetch-profile/");
                 if (response.status === 200) {
+                    console.log( 'Guys here is the data', response.data)
                     setProfile({
                         username: response.data.username,
                         imageUrl: response.data.image_url,
@@ -227,7 +229,7 @@ function RightProfile() {
                     <div className="w-full h-full bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
                         {profile.imageUrl ? (
                             <img
-                                src={`http://localhost:8000${profile.imageUrl}`}
+                                src={`${backendUrl}${profile.imageUrl}`}
                                 alt="Profile"
                                 className="w-full h-full object-cover"
                             />
@@ -259,7 +261,7 @@ function RightProfile() {
                                     <img src={imagePreview} alt="Selected Preview" className="w-full h-full object-cover" />
                                 ) : profile.imageUrl ? (
                                     <img
-                                        src={`http://localhost:8000${profile.imageUrl}`}
+                                        src={`${backendUrl}${profile.imageUrl}`}
                                         alt="Profile Preview"
                                         className="w-full h-full object-cover"
                                     />

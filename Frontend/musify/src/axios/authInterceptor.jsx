@@ -48,7 +48,7 @@ axiosInstance.interceptors.response.use(
                     return Promise.reject(refreshError);
                 } 
             }else {
-                console.warn('No access token found or token is still valid. Logging out.');
+                console.warn('No access token found or token is not valid. Logging out.');
                 await handleLogout();
                 window.location.href = '/login'; 
                 return Promise.reject(error);

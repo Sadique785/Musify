@@ -17,6 +17,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from authentication.models import CustomUser, Profile, Talent, Genre
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from .serializers import UserRegisterSerializer, VerifyEmailSerializer, UserLoginSerializer, ProfileImageSerializer, ProfileSerializer, GoogleLoginSerializer
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 
 
@@ -125,21 +127,26 @@ class VerifyOtp(APIView):
 
 
 
-
+# @method_decorator(csrf_exempt, name='dispatch')
 class LoginView(APIView):
+    authentication_classes = []  
+    permission_classes = []  
     def post(self, request):
+        print(request.headers, 'header')
         serializer = UserLoginSerializer(data=request.data)
 
         if serializer.is_valid():
             user = serializer.validated_data['user']
             if user.is_active:
                 tokens = generate_token_with_claims(user)
+                csrf_token = csrf.get_token(request)
                 response_data = {
                     "success":True,
                     "message":"Login Successful",
                     "data":{
                         "accessToken": tokens["access"],
                         "refreshToken": tokens["refresh"],
+                        "csrfToken":csrf_token,
                         "user":{
                             "id":user.id,
                             "username":user.username,
@@ -152,24 +159,30 @@ class LoginView(APIView):
                 }
                 response = Response(response_data)
 
-                response.set_cookie(
-                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
-                value=tokens["access"],
-                expires=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
-                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
-                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
-                )
+                # response.set_cookie(
+                # key=settings.SIMPLE_JWT['AUTH_COOKIE'],
+                # value=tokens["access"],
+                # expires=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
+                # secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                # httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+                # samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+                # )
 
+                # response.set_cookie(
+                #     key='refresh_token',  
+                #     value=tokens["refresh"],
+                #     expires=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
+                #     secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                #     httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+                #     samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+                # )
+                
                 response.set_cookie(
-                    key='refresh_token',  
-                    value=tokens["refresh"],
-                    expires=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
-                    secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                    httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+                    key='csrftoken',
+                    value=csrf_token,
+                    httponly=False,  
                     samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
                 )
-                csrf.get_token(request)
                 
                 
                 return response
@@ -214,6 +227,7 @@ class GoogleLoginView(APIView):
             print(user, 'userhere')
 
             tokens = generate_token_with_claims(user)
+            csrf_token = csrf.get_token(request)
             print(tokens)
 
          
@@ -223,6 +237,7 @@ class GoogleLoginView(APIView):
                 "data": {
                     "accessToken": tokens["access"],
                     "refreshToken": tokens["refresh"],
+                    "csrfToken":csrf_token,
                     "user": {
                         "id": user.id,
                         "username": user.username,
@@ -235,24 +250,23 @@ class GoogleLoginView(APIView):
             response = Response(response_data)
 
             # Set the cookies
-            response.set_cookie(
-                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
-                value=tokens["access"],
-                expires=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
-                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
-                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
-            )
+            # response.set_cookie(
+            #     key=settings.SIMPLE_JWT['AUTH_COOKIE'],
+            #     value=tokens["access"],
+            #     expires=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
+            #     secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+            #     httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+            #     samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+            # )
 
-            response.set_cookie(
-                key='refresh_token',
-                value=tokens["refresh"],
-                expires=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
-                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
-                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
-            )
-            csrf_token = csrf.get_token(request)
+            # response.set_cookie(
+            #     key='refresh_token',
+            #     value=tokens["refresh"],
+            #     expires=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
+            #     secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+            #     httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+            #     samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+            # )
             response.set_cookie(
                 key='csrftoken',
                 value=csrf_token,
@@ -295,23 +309,23 @@ class TokenRefresherView(APIView):
 
             response = Response({"access":new_access_token, 'refresh':str(token)}, status=status.HTTP_200_OK)
 
-            response.set_cookie(
-                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
-                value=new_access_token,
-                expires=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
-                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
-                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
-            )
+            # response.set_cookie(
+            #     key=settings.SIMPLE_JWT['AUTH_COOKIE'],
+            #     value=new_access_token,
+            #     expires=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
+            #     secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+            #     httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+            #     samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+            # )
 
-            response.set_cookie(
-                key='refresh_token',
-                value=str(token),
-                expires=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
-                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
-                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
-            )
+            # response.set_cookie(
+            #     key='refresh_token',
+            #     value=str(token),
+            #     expires=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
+            #     secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+            #     httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+            #     samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+            # )
 
             print(new_access_token, 'This is the new access token')
 
@@ -335,6 +349,8 @@ class LogoutView(APIView):
     permission_classes = []  
 
     def post(self, request):
+        print(request.headers, 'header')
+
         print('reached here')
         try:            
             refresh_token = request.COOKIES.get('refresh_token')
@@ -352,8 +368,8 @@ class LogoutView(APIView):
             logout(request)
 
             response = Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
-            response.delete_cookie(key=settings.SIMPLE_JWT['AUTH_COOKIE'])
-            response.delete_cookie(key='refresh_token')
+            # response.delete_cookie(key=settings.SIMPLE_JWT['AUTH_COOKIE'])
+            # response.delete_cookie(key='refresh_token')
             print('Successfully logged out and cleared cookies')
 
             return response
@@ -365,7 +381,11 @@ class LogoutView(APIView):
 class FetchProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
+
+    print('got into fetch-profile')
     def get(self, request):
+
+        print('headers', request.headers)
         try:
             print(request.user)
             profile = Profile.objects.get(user=request.user)
@@ -407,20 +427,29 @@ class EditProfileView(APIView):
 class ChangeProfileImageView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def put(self, request, *args, **kwargs):
+        print('PUT request received for changing profile image')
+        print('Request headers:', request.headers)
+        print('Request files:', request.FILES)
 
-    def post(self, request, *args, **kwargs):
-        user =  request.user
+        user = request.user
+        print('Authenticated user:', user)
+
         profile = get_object_or_404(Profile, user=user)
+        print('Profile found:', profile.id)
 
         if 'image' in request.FILES:
+            print('Image file found')
             profile.image = request.FILES['image']
             profile.save()
+            print('Profile image updated')
 
             serializer = ProfileImageSerializer(profile)
-            print(serializer.data)
-            return Response(serializer.data,status=status.HTTP_200_OK)
-
-        return Response({"error": "No image provided"}, status=status.HTTP_400_BAD_REQUEST)
+            print('Serializer data:', serializer.data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            print('No image file found')
+            return Response({"error": "No image provided"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 

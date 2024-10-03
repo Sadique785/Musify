@@ -78,10 +78,19 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
+    "http://localhost:8000",  # Gateway URL
 ]
+
 CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5173',  # Add your frontend origin here
+    'http://localhost:5173',  # Frontend
+    'http://localhost:8000',  # Gateway
 ]
+
+
+CSRF_COOKIE_NAME = "csrftoken"
+CSRF_COOKIE_SECURE = False  # Set to True in production
+CSRF_COOKIE_HTTPONLY = False  # CSRF token must be accessible by the frontend
+CSRF_COOKIE_SAMESITE = "Lax"
 
 
 CORS_ALLOW_CREDENTIALS = True
@@ -93,6 +102,13 @@ CORS_ALLOW_METHODS = [
     'PATCH',
     'POST',
     'PUT',
+]
+CORS_ALLOW_HEADERS = [
+    'authorization',
+    'content-type',
+    'x-csrftoken',  # Allow CSRF token in headers
+    'x-requested-with',
+    'X-Refresh-Token',
 ]
 
 REST_FRAMEWORK = {

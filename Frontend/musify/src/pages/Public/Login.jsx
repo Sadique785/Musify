@@ -30,45 +30,51 @@ function Login() {
   const login = useGoogleLogin({
     onSuccess: async tokenResponse => {
       console.log(tokenResponse)
-      const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-        headers: {
-          Authorization: `Bearer ${tokenResponse.access_token}`,
-        },
-      });
-  
-      const userData = await userInfo.json();
-      console.log(userData, 'userdata');
+      const accessToken = tokenResponse.access_token;
 
-      userData.mob = '';
 
-      try {
-        const response = await axiosInstance.post('/auth/google-login/', userData);
-        
-        if (response.status === 200) {
-          const { accessToken, refreshToken, user } = response.data.data;
+      try{
+
+        const response = await axiosInstance.post('/auth/google-login/',{
+          access_token:accessToken
+        });
+
+        if (response.status == 200){
+          console.log("Login Success");
+          console.log(response);
+          const {refreshToken, accessToken, user} = response.data.data
           dispatch(loginSuccess({
             user,
             accessToken,
             refreshToken,
-          }));
-  
-          // Redirect after successful login
+
+
+          }))
+
           setTimeout(() => {
-            navigate('/feed');
+            navigate('/feed')
           }, 2000);
+
+          console.log(user);
+          
+          
+          
         }
-      } catch (error) {
-        console.error('Error during login:', error);
+
+      } catch (error){
         if (error.response && error.response.data) {
           const nonFieldErrors = error.response.data.non_field_errors;
+          
           if (nonFieldErrors && nonFieldErrors.length > 0) {
             toast.error(nonFieldErrors[0]);
           }
-          // Handle other errors as needed
         } else {
           toast.error('An error occurred. Please try again.');
         }
+
       }
+
+
       
     }
   });
@@ -114,6 +120,7 @@ function Login() {
             user:response.data.data.user,
             accessToken:response.data.data.accessToken,
             refreshToken:response.data.data.refreshToken,
+            csrfToken:response.data.data.csrfToken,
 
           }));
 

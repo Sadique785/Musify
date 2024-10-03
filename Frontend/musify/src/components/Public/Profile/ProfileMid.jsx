@@ -1,7 +1,13 @@
-import React from 'react';
-import { FaImage, FaVideo, FaMusic } from 'react-icons/fa';
+import React, { useContext } from 'react';
+import { FaImage, FaVideo, FaMusic, FaUser } from 'react-icons/fa';
+import { ProfileContext } from '../../../context/ProfileContext';
 
 function ProfileMid() {
+
+  const { profile } = useContext(ProfileContext)
+  const gatewayUrl = import.meta.env.VITE_BACKEND_URL
+
+
   return (
     <div className="flex flex-col items-start p-6 w-full reverse-container">
 
@@ -11,11 +17,18 @@ function ProfileMid() {
       <div className="flex items-center w-full mb-6">
    
         <div className="w-10 h-10 bg-gray-300 rounded-full overflow-hidden flex items-center justify-center mr-4">
-          <img
-            src="profile/profile.jpg"
+
+          {profile.imageUrl?(
+            <img
+            src={`${gatewayUrl}${profile.imageUrl}`}
             alt="Profile"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition duration-300 ease-in-out"
           />
+          ) 
+          :(
+            <FaUser className="text-gray-500 text-2xl" /> // Display user icon if no image
+          )}
+
         </div>
 
         <div className="flex-grow relative">

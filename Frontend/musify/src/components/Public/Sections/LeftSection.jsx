@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { useLocation } from 'react-router-dom';
 import FeedLeft from '../Feed/FeedLeft';
 import LibLeft from '../Library/LibLeft';
@@ -17,7 +17,7 @@ function LeftSection({ type }) {
 
       {isFeedPage && <FeedLeft />}
       {isLibPage && <LibLeft />}
-      {isProfile && <ProfileLeft />}
+      {isProfile && <ProfileLeft  />}
 
       
     </div>

@@ -1,40 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaEdit, FaGuitar, FaMicrophone, FaMusic, FaCamera, FaUser, FaTimes } from 'react-icons/fa';
 import axiosInstance from '../../../axios/authInterceptor';
+import { ProfileContext } from '../../../context/ProfileContext';
 
 function ProfileLeft() {
-  const [Profile, setProfile] = useState({
-    username: '',
-    imageUrl: '',
-  });
-
+  const {profile, setProfile} = useContext(ProfileContext)
   const navigate = useNavigate();
-  
-  const backendUrl = 'http://localhost:8000';
+  const gatewayUrl = import.meta.env.VITE_BACKEND_URL
   const [isModalOpen, setIsModalOpen] = useState(false);  // Modal initially closed
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await axiosInstance.get('/auth/fetch-profile/');
-        console.log(response);
 
-        if (response.status === 200) {
-          setProfile({
-            username: response.data.username,
-            imageUrl: response.data.image_url,
-          });
-        }
-      } catch (error) {
-        console.error('Error Fetching the Details', error);
-      }
-    };
-
-    fetchProfile();
-  }, []);
 
   const handleEditProfile = async () => {
     try {
@@ -64,7 +42,7 @@ function ProfileLeft() {
       formData.append('image', selectedImage);
 
       try {
-        const response = await axiosInstance.post('/auth/change-profile-image/', formData, {
+        const response = await axiosInstance.put('/auth/change-profile-image/', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
@@ -96,9 +74,9 @@ function ProfileLeft() {
       <div className="relative w-32 h-32 cursor-pointer" onClick={toggleModal}>
         {/* Profile Image */}
         <div className="w-full h-full bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
-          {Profile.imageUrl ? (
+          {profile.imageUrl ? (
             <img
-              src={`${backendUrl}${Profile.imageUrl}`}
+              src={`${gatewayUrl}${profile.imageUrl}`}
               alt="Profile"
               className="w-full h-full object-cover transition duration-300 ease-in-out"
             />
@@ -114,7 +92,7 @@ function ProfileLeft() {
       </div>
   
       {/* Username */}
-      <h2 className="text-xl font-semibold text-center mt-4">{Profile.username}</h2>
+      <h2 className="text-xl font-semibold text-center mt-4">{profile.username}</h2>
   
       {/* Edit Profile Button */}
       <button
@@ -145,9 +123,9 @@ function ProfileLeft() {
                   alt="Selected Preview"
                   className="w-full h-full object-cover"
                 />
-              ) : Profile.imageUrl ? (
+              ) : profile.imageUrl ? (
                 <img
-                  src={`${backendUrl}${Profile.imageUrl}`}
+                  src={`${gatewayUrl}${profile.imageUrl}`}
                   alt="Profile Preview"
                   className="w-full h-full object-cover"
                 />

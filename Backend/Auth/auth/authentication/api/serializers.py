@@ -114,19 +114,15 @@ class ProfileImageSerializer(serializers.ModelSerializer):
         fields = ['user', 'image']
 
 class ProfileSerializer(serializers.ModelSerializer):
-    talents = serializers.SerializerMethodField()
-    genres = serializers.SerializerMethodField()
-    username = serializers.CharField(source='user.username', write_only=True)   
+    talents = serializers.ListField(child=serializers.CharField(), write_only=True)
+    genres = serializers.ListField(child=serializers.CharField(), write_only=True)
+    username = serializers.CharField(source='user.username', write_only=True) 
 
     class Meta:
         model = Profile
         fields = ['username', 'location', 'date_of_birth', 'gender', 'talents', 'genres', 'bio']  # Ensure 'username' is included
 
-    def get_talents(self, obj):
-        return [talent.name for talent in obj.talents.all()]
 
-    def get_genres(self, obj):
-        return [genre.name for genre in obj.genres.all()]
 
     def update(self, instance, validated_data):
         print(validated_data, 'Validated Data')
@@ -143,18 +139,19 @@ class ProfileSerializer(serializers.ModelSerializer):
         instance.bio = validated_data.get('bio', instance.bio)
         
         # Process talents
-        talent_names = validated_data.pop('talents', [])
-        talents = [Talent.objects.get_or_create(name=name)[0] for name in talent_names]
-        instance.talents.set(talents)
+        talent_names = validated_data.get('talents', [])
+
+        if talent_names:
+            talents = [Talent.objects.get_or_create(name=name)[0] for name in talent_names]
+            instance.talents.set(talents)  # Replace with new talents
 
         # Process genres
-        genre_names = validated_data.pop('genres', [])
-        genres = [Genre.objects.get_or_create(name=name)[0] for name in genre_names]
-        instance.genres.set(genres)
+        genre_names = validated_data.get('genres', [])
+        if genre_names:
+            genres = [Genre.objects.get_or_create(name=name)[0] for name in genre_names]
+            instance.genres.set(genres)
 
-        # Update other fields
-        # for attr, value in validated_data.items():
-        #     setattr(instance, attr, value)
+
         
         instance.save()
         return instance
