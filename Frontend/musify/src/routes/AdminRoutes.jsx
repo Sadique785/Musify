@@ -5,6 +5,8 @@ import AdminLogin from "../pages/Admin/AdminLogin";
 import UserManagement from "../pages/Admin/Protected/ManageUsers";
 import NotFound from "../components/Public/NotFound";
 import { Toaster } from 'react-hot-toast';
+import AdminDetail from "../pages/Admin/Protected/AdminDetail";
+
 
 
 
@@ -24,6 +26,8 @@ function AdminRoutes() {
       <Route element={<AdminWrapper />}> {/* Correct closing tag */}
         <Route path="/dashboard" element={<AdminDashboard />} />
         <Route path="/users" element={<UserManagement />} />
+        <Route path="/users/details/:id" element={<AdminDetail />} />
+
       </Route>
 
 

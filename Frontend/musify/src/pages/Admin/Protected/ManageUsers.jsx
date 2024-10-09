@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import AdminSidebar from '../../../components/Admin/AdminSidebar';
 import AdminHeader from '../../../components/Admin/AdminHeader';
-import axios from '../../../axios/adminInterceptor';
+import axiosInstance from '../../../axios/adminInterceptor';
+import { useNavigate } from 'react-router-dom';
 
 function ManageUsers() {
   const [adminProfileImage, setAdminProfileImage] = useState('');
@@ -10,6 +11,7 @@ function ManageUsers() {
   const [activeUsers, setActiveUsers] = useState(0);
   const [featuredUsers, setFeaturedUsers] = useState(0);
   const [error, setError] = useState(null); // State for error handling
+  const navigate  = useNavigate();
 
   // useEffect to fetch users data
   useEffect(() => {
@@ -17,7 +19,7 @@ function ManageUsers() {
       try {
         console.log('sending request');
         
-        const response = await axios.get('/admin-side/fetch-users/');
+        const response = await axiosInstance.get('/admin-side/fetch-users/');
         const data = response.data;
         console.log(data);
         
@@ -38,6 +40,12 @@ function ManageUsers() {
     fetchUserData();
   }, []);
 
+  const seeDetails = (user) => {
+    console.log('this is the user', user.id);
+    
+    navigate(`details/${user.id}`)
+  }
+
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
@@ -48,7 +56,7 @@ function ManageUsers() {
         <AdminHeader adminProfileImage={adminProfileImage} />
 
         {/* Main Content */}
-        <div className="flex-grow p-10 relative">
+        <div className="flex-grow p-10 relative overflow-y-auto">
 
           {/* Three sections */}
           <div className="grid grid-cols-3 gap-6 mb-10">
@@ -80,7 +88,7 @@ function ManageUsers() {
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="min-w-full bg-gray-800">
+            <table className="min-w-full bg-gray-800 table-auto">
               <thead>
                 <tr className="text-left border-b border-gray-600">
                   <th className="py-3 px-6">User</th>
@@ -95,19 +103,24 @@ function ManageUsers() {
                 {users.length > 0 ? (
                   users.map((user, index) => (
                     <tr key={index} className="border-b border-gray-700">
-                      <td className="py-3 px-6 flex items-center">
-                        <img 
-                          src={user.profileImage || '/path-to-placeholder-image.jpg'} 
-                          alt="User Profile" 
-                          className="w-8 h-8 rounded-full mr-3"
-                        />
-                        <span>{user.username}</span>
-                      </td>
-                      <td className="py-3 px-6">
-                        <span className={user.is_active ? 'text-green-500' : 'text-red-500'}>
-                          {user.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
+                    
+                    <td 
+          className="py-3 px-6 flex items-center cursor-pointer" // Add cursor pointer here
+          onClick={() => seeDetails(user)} // Redirect on click
+        >
+          <img 
+            src={user.profileImage || '/path-to-placeholder-image.jpg'} 
+            alt="User Profile" 
+            className="w-8 h-8 rounded-full mr-3"
+          />
+          <span>{user.username}</span>
+        </td>
+        <td className="py-3 px-6">
+          <span className={user.is_active ? 'text-green-500' : 'text-red-500'}>
+            {user.is_active ? 'Active' : 'Inactive'}
+          </span>
+        </td>
+
                       <td className="py-3 px-6">{user.phone || 'N/A'}</td>
                       <td className="py-3 px-6">{user.role}</td>
                       <td className="py-3 px-6">

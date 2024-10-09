@@ -1,4 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
+import Cookies from 'js-cookie'
+
 
 const initialState = {
   user: null,
@@ -17,7 +19,7 @@ const authSlice = createSlice({
       state.user = action.payload.user;
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
-      state.csrfToken = action.payload.csrfToken || state.csrfToken;
+      state.csrfToken =  Cookies.get('csrftoken') || state.csrfToken;
       state.isAuthenticated = true;
       state.isSuperuser = action.payload.user.isSuperuser || false;  
     },

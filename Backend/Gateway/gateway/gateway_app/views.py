@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from django.http import HttpResponse
+from django.conf import settings
 import os
 from dotenv import load_dotenv
 
@@ -16,6 +17,7 @@ class AuthMicroservice(APIView):
 
     def get(self, request, path):
         print('GET request received')
+        print('Request headers for the auth service:', request.headers)
 
         try:
             # Prepare headers to forward
@@ -28,8 +30,9 @@ class AuthMicroservice(APIView):
 
             auth_service_url = os.getenv('AUTH_SERVICE_URL')
             forward_url = f'{auth_service_url}/{path}'
-            with httpx.Client() as client:
-                response = client.get(forward_url, headers=headers, params=request.GET)
+            # with httpx.Client() as client:
+            #     response = client.get(forward_url, headers=headers, params=request.GET)
+            response = self.session.get(forward_url, headers=headers, params=request.GET)
 
             return Response(response.json(), status=response.status_code)
 
@@ -53,7 +56,7 @@ class AuthMicroservice(APIView):
             response = self.session.post(forward_url, headers=headers, json=request.data)
 
             # Check if there's a 'set-cookie' header in the response
-            set_cookie_header = response.headers.get('set-cookie')
+            set_cookie_headers = response.headers.get_list('set-cookie')
             print('Header details here:', response.headers)
 
             # Prepare the response to return to the frontend
@@ -64,19 +67,31 @@ class AuthMicroservice(APIView):
             django_response = Response(response_data, status=status_code)
 
             # If 'set-cookie' is present, set it in the outgoing response
-            if set_cookie_header:
-                # Extract the cookie value (e.g., 'csrftoken=CFeXfO6dfJztMwSegRjKYOeYou3B2AcF; ...')
-                cookie_value = set_cookie_header.split(';')[0]
-                cookie_name, cookie_value = cookie_value.split('=')
+            if set_cookie_headers:
+                for set_cookie_header in set_cookie_headers:
+                    # Split the set-cookie header into key-value pairs
+                    cookie_parts = set_cookie_header.split(';')
+                    cookie_value = cookie_parts[0]
+                    cookie_name, cookie_value = cookie_value.split('=')
 
-                # Add the cookie to the Django response
-                django_response.set_cookie(
-                    key=cookie_name,
-                    value=cookie_value,
-                    max_age=31449600,  # One year
-                    path='/',
-                    samesite='Lax',
-                )
+                    # Check if the backend is setting an empty value (indicating cookie deletion)
+                    if cookie_value == '':  # If cookie value is empty
+                        django_response.delete_cookie(
+                            key=cookie_name,
+                            path='/',
+                            max_age=0,  # Set max_age to 0 to ensure the cookie is deleted
+                            samesite='Lax',
+                        )
+
+                    else:
+                        # Otherwise, set the cookie as usual
+                        django_response.set_cookie(
+                            key=cookie_name,
+                            value=cookie_value,
+                            max_age=31449600,  # One year
+                            path='/',
+                            samesite='Lax',
+                        )
 
             return django_response
 
@@ -136,11 +151,17 @@ class MediaFilesProxy(APIView):
             return Response({"error": f"Service unavailable: {str(e)}"}, status=503)
         
 
+        
+        
 class AdminService(APIView):
 
+    session = httpx.Client()
+
     def get(self, request, path):
-        
         print('GET request received for admin-side')
+        print('path here', path)
+        user_id = request.GET.get('id')
+        print(user_id)
 
         try:
             headers = dict(request.headers)
@@ -148,19 +169,83 @@ class AdminService(APIView):
             if 'Content-Length' in headers:
                 del headers['Content-Length']
 
-            # admin_service_url = f'http://localhost:8001/admin-side/{path}'
             admin_service_url = os.getenv('ADMIN_SERVICE_URL')
             forward_url = f'{admin_service_url}/{path}'
 
-
-            print(f'Forwarding GET request to: {forward_url}')
-            print('Headers:', headers)
-            print('Query Params:', request.GET)
-
             with httpx.Client() as client:
                 response = client.get(forward_url, headers=headers, params=request.GET)
-                print(f"Response status code: {response.status_code}")
-                print(f"Response content: {response.content}")  # Log raw response content
+
+            return Response(response.json(), status=response.status_code)
+
+        except httpx.RequestError as e:
+            return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+
+    def post(self, request, path):
+        print('POST request received for admin-side')
+
+        try:
+            admin_service_url = os.getenv('ADMIN_SERVICE_URL')
+            forward_url = f'{admin_service_url}/{path}'
+            headers = dict(request.headers)
+
+            # Remove 'Content-Length' to avoid issues
+            if 'Content-Length' in headers:
+                del headers['Content-Length']
+
+            # Use session to manage cookies across requests
+            response = self.session.post(forward_url, headers=headers, json=request.data)
+
+            # Check if there's a 'set-cookie' header in the response
+            set_cookie_header = response.headers.get('set-cookie')
+            print('Admin POST response headers:', response.headers)
+
+            # Prepare the response to return to the frontend
+            response_data = response.json()
+            status_code = response.status_code
+
+            # Create the response to be returned
+            django_response = Response(response_data, status=status_code)
+
+            # If 'set-cookie' is present, set it in the outgoing response
+            if set_cookie_header:
+                # Extract the cookie value (e.g., 'csrftoken=CFeXfO6dfJztMwSegRjKYOeYou3B2AcF; ...')
+                cookie_value = set_cookie_header.split(';')[0]
+                cookie_name, cookie_value = cookie_value.split('=')
+
+                # Add the cookie to the Django response
+                django_response.set_cookie(
+                    key=cookie_name,
+                    value=cookie_value,
+                    max_age=31449600,  # One year
+                    path='/',
+                    samesite='Lax',
+                )
+
+            return django_response
+
+        except httpx.RequestError as e:
+            return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+
+
+
+class ContentMicroservice(APIView):
+
+    session = httpx.Client()
+
+    def get(self, request, path):
+        print('GET request received for content service')
+
+        try:
+            print('request header from content', request.headers, request.GET)
+            headers = dict(request.headers)
+            if 'Content-Length' in headers:
+                del headers['Content-Length']
+
+            content_service_url = os.getenv('CONTENT_SERVICE_URL')
+            forward_url = f'{content_service_url}/{path}'
+            
+            with httpx.Client() as client:
+                response = client.get(forward_url, headers=headers, params=request.GET)
 
             return Response(response.json(), status=response.status_code)
 
@@ -169,19 +254,65 @@ class AdminService(APIView):
             return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
 
     def post(self, request, path):
-        print('POST request received for admin-side')
+        print('POST request received for content service')
 
         try:
-            # admin_service_url = f'http://localhost:8001/admin-side/{path}'
-            admin_service_url = os.getenv('ADMIN_SERVICE_URL')
-            forward_url = f'{admin_service_url}/{path}'
+            content_service_url = os.getenv('CONTENT_SERVICE_URL')
+            forward_url = f'{content_service_url}/{path}'
+            headers = dict(request.headers)
 
+            if 'Content-Length' in headers:
+                del headers['Content-Length']
 
-            with httpx.Client() as client:
-                response = client.post(forward_url, json=request.data)
-                print('Admin POST response headers:', response.headers)
+            response = self.session.post(forward_url, headers=headers, json=request.data)
+
+            set_cookie_header = response.headers.get('set-cookie')
+            print('Header details here:', response.headers)
+
+            response_data = response.json()
+            status_code = response.status_code
+
+            django_response = Response(response_data, status=status_code)
+
+            if set_cookie_header:
+                cookie_value = set_cookie_header.split(';')[0]
+                cookie_name, cookie_value = cookie_value.split('=')
+                django_response.set_cookie(
+                    key=cookie_name,
+                    value=cookie_value,
+                    max_age=31449600,  # One year
+                    path='/',
+                    samesite='Lax',
+                )
+
+            return django_response
+
+        except httpx.RequestError as e:
+            return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+
+    def put(self, request, path):
+        print('PUT request received for content service')
+
+        try:
+            content_service_url = os.getenv('CONTENT_SERVICE_URL')
+            forward_url = f'{content_service_url}/{path}'
+            headers = dict(request.headers)
+
+            if 'Content-Length' in headers:
+                del headers['Content-Length']
+
+            if 'video' in request.FILES:
+                files = {'video': request.FILES['video']}
+                response = self.session.put(forward_url, headers=headers, files=files)
+            else:
+                response = self.session.put(forward_url, headers=headers, json=request.data)
+
+            print('Headers after receiving response:', response.headers)
 
             return Response(response.json(), status=response.status_code)
 
         except httpx.RequestError as e:
             return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+
+
+            

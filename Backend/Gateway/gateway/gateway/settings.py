@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'gateway_app',
     'rest_framework',
     'corsheaders',
+    'django_redis',
 ]
 
 MIDDLEWARE = [
@@ -53,6 +54,22 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+# SESSION_CACHE_ALIAS = 'default'
+
+
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django_redis.cache.RedisCache',
+#         'LOCATION': 'redis://127.0.0.1:6379/1',  # Use Redis db 1 for session storage
+#         'OPTIONS': {
+#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#         }
+#     }
+# }
+
+
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # Frontend
     "http://localhost:5173",  # Frontend

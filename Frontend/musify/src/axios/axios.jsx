@@ -14,19 +14,13 @@ axiosInstance.interceptors.request.use(
     config => {
         const state = store.getState();
         const csrfTokenFromState = state.auth.csrfToken;
+
         const accessToken = state.auth.accessToken;
         const refreshToken = state.auth.refreshToken;
 
-        const cookiecsrf = Cookies.get('csrftoken');
-        if (cookiecsrf){
-            console.log(cookiecsrf);
-            
-        }else{
-            console.log('NOKENDADA UNNI IVIDILLA');
-            
-        }
 
-        const csrfToken = csrfTokenFromState || Cookies.get('csrftoken');
+
+        const csrfToken = Cookies.get('csrftoken');
 
         // Correct the case of the CSRF token header
         if (csrfToken) {

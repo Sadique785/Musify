@@ -11,7 +11,7 @@ function Dashboard() {
       <AdminSidebar />
 
       {/* Main Content Area */}
-      <div className="flex flex-col w-full bg-[#060E0E] text-white">
+      <div className="flex flex-col w-full bg-[#060E0E] text-white relative">
         {/* Header */}
         <AdminHeader />
 

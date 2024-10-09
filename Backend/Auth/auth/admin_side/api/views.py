@@ -7,7 +7,16 @@ from .serializers import AdminLoginSerializer, UserSerializer  # Adjust import a
 from django.conf import settings
 from django.middleware import csrf
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+from django.contrib.auth import logout
+from django.shortcuts import get_object_or_404
+from django.contrib.sessions.models import Session
+from django.utils import timezone
+from django.contrib.auth import get_user_model
+
+
+
 
 
 
@@ -24,6 +33,9 @@ def generate_token_with_claims(user):
     }
 
 class AdminLoginView(APIView):
+    authentication_classes = []  
+    permission_classes = []  
+
     def post(self, request):
         serializer = AdminLoginSerializer(data=request.data)
 
@@ -127,3 +139,124 @@ class FetchAdminProfileImage(APIView):
 
             return Response({"error": "Profile does not exist for this user."}, status=status.HTTP_404_NOT_FOUND)
                 
+class FetchUserDetails(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request, id):
+        try:
+
+            
+
+            user = get_object_or_404(CustomUser, id=id)
+            print('user here',user)
+            profile = get_object_or_404(Profile, user=user)
+            print(profile)
+            admin_profile_image = request.user.user_profile.image.url if request.user.user_profile and request.user.user_profile.image else None
+
+
+
+            user_data = {
+                "id":user.id,
+                "username":user.username,
+                "email":user.email,
+                "is_active":user.is_active,
+                "is_staff":user.is_staff,
+                "last_login":user.last_login,
+                "is_online": profile.is_online,
+                "friends_count": profile.get_friends_no(),
+                "following_count": profile.following.count(),
+                "followers_count": profile.followers.count(),
+                "blocked_users_count": profile.blocked_users.count(),
+                "talents": [talent.name for talent in profile.talents.all()],
+                "genres": [genre.name for genre in profile.genres.all()],
+                "userImage":profile.image.url,
+                'admin_profile_image':admin_profile_image,
+            }
+
+            return Response(user_data, status=status.HTTP_200_OK)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Profile.DoesNotExist:
+            return Response({"error": "Profile does not exist for this user."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class MakeAdminView(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure user is authenticated and an admin
+
+    def post(self, request, user_id):
+        print(request.headers)
+        try:
+
+            user = CustomUser.objects.get(id=user_id) 
+            print(user)
+            user.is_staff = True  
+            user.save() 
+            return Response({"message": "User has been made an admin."}, status=status.HTTP_200_OK)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+class BlockUserView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser] 
+
+    def post(self, request, user_id):
+        try:
+            user = CustomUser.objects.get(id=user_id)  
+            user.is_active = not user.is_active  
+            user.save() 
+
+            if not user.is_active:
+                sessions = Session.objects.filter(expire_date__gte=timezone.now())  # Only valid sessions
+                deleted_sessions = 0  
+                print('sessions here', sessions)
+
+                for session in sessions:
+                    session_data = session.get_decoded()
+                    if session_data.get('_auth_user_id') == str(user.id):  # User ID stored as string in sessions
+                        session.delete()  
+                        deleted_sessions += 1
+                print('deleted sessions:', deleted_sessions, user)
+
+            if user.is_active:
+                return Response({"message": "User has been unblocked."}, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "User has been blocked."}, status=status.HTTP_200_OK)
+                
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class AdminLogoutView(APIView):
+
+    authentication_classes = []  
+    permission_classes = []  
+
+    def post(self, request):
+        print(request.headers, 'header')
+        print('Admin logout initiated')
+
+        try:
+            # Get refresh token from the cookies or headers
+            refresh_token = request.COOKIES.get('refresh_token')
+            print(f"Refresh token: {refresh_token}")
+
+            if refresh_token:
+                try:
+                    token = RefreshToken(refresh_token)
+                    print(f"Token before blacklisting: {token}")
+                    token.blacklist()  # Blacklist the refresh token
+                except TokenError as e:
+                    print(f"Token error (invalid or expired): {str(e)}")
+
+            # Log out the admin (invalidate the session, if any)
+            logout(request)
+
+            # Create the response and delete the cookies
+            response = Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
+            response.delete_cookie('csrftoken')  # Clear the refresh token cookie
+            # response.delete_cookie('access_token')  # Clear access token if stored in cookies
+            print('Successfully logged out and cleared cookies')
+
+            return response
+
+        except Exception as e:
+            print(f"Logout failed: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

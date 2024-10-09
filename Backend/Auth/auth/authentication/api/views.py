@@ -127,7 +127,7 @@ class VerifyOtp(APIView):
 
 
 
-# @method_decorator(csrf_exempt, name='dispatch')
+
 class LoginView(APIView):
     authentication_classes = []  
     permission_classes = []  
@@ -140,6 +140,8 @@ class LoginView(APIView):
             if user.is_active:
                 tokens = generate_token_with_claims(user)
                 csrf_token = csrf.get_token(request)
+
+                request.session['user_id'] =  user.id
                 response_data = {
                     "success":True,
                     "message":"Login Successful",
@@ -228,6 +230,7 @@ class GoogleLoginView(APIView):
 
             tokens = generate_token_with_claims(user)
             csrf_token = csrf.get_token(request)
+            request.session['user_id'] = user.id
             print(tokens)
 
          
@@ -353,7 +356,7 @@ class LogoutView(APIView):
 
         print('reached here')
         try:            
-            refresh_token = request.COOKIES.get('refresh_token')
+            refresh_token = request.headers.get('X-Refresh-Token')
             print(f"Refresh token: {refresh_token}")
 
             if refresh_token:
@@ -367,9 +370,31 @@ class LogoutView(APIView):
 
             logout(request)
 
+            session_key = request.session.session_key
+            if session_key:
+                print('reached inside the if condition')
+                from django.contrib.sessions.models import Session
+                try:
+                    Session.objects.get(session_key=session_key).delete()
+                    print(f"Deleted session for key: {session_key}")
+                except Session.DoesNotExist:
+                    print(f"No session found for key: {session_key}")
+
             response = Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
             # response.delete_cookie(key=settings.SIMPLE_JWT['AUTH_COOKIE'])
             # response.delete_cookie(key='refresh_token')
+            response.delete_cookie(
+                key='csrftoken', 
+                path='/',
+
+            )
+
+            response.delete_cookie(
+                key='sessionid', 
+                path='/',
+
+            )
+
             print('Successfully logged out and cleared cookies')
 
             return response

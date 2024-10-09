@@ -1,36 +1,44 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast'; 
 import axiosInstance from '../../axios/adminInterceptor';
 import { useNavigate } from 'react-router-dom'; 
 import { useDispatch } from 'react-redux'; 
 import { loginSuccess } from '../../redux/auth/Slices/authSlice'; 
+import { FaSpinner } from 'react-icons/fa';  // Import spinner icon
 
 function AdminLogin() {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [loading, setLoading] = useState(false);  // Loading state
 
   const onSubmit = async (data) => {
+    setLoading(true);  // Start loading animation
     try {
       const response = await axiosInstance.post('/admin-side/admin-login/', data);
       
       console.log('Login successful:', response.data);
       toast.success('Login successful!');
-
+  
+      // Dispatch login success action to store the tokens and user info
       dispatch(loginSuccess({
-        user:response.data.data.user,
-        accessToken:response.data.data.accessToken,
-        refreshToken:response.data.data.refreshToken,
-        csrfToken:response.data.data.csrfToken,
+        user: response.data.data.user,
+        accessToken: response.data.data.accessToken,
+        refreshToken: response.data.data.refreshToken,
+        csrfToken: response.data.data.csrfToken,
       }));
-
-      navigate('/admin/dashboard');
+  
+      // Stop loading, then immediately navigate
+      setLoading(false);  // Stop loading animation
+      navigate('/admin/dashboard');  // Navigate right after loading stops
     } catch (error) {
       console.error('Login failed:', error.response ? error.response.data : error.message);
       toast.error('Login failed. Please check your credentials.');
+      setLoading(false);  // Stop loading animation in case of failure
     }
   };
+  
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-900">
@@ -77,9 +85,18 @@ function AdminLogin() {
 
           <button
             type="submit"
-            className="w-full bg-[#380E0D] hover:bg-[#3a1514] text-white py-2 px-4 rounded-md"
+            disabled={loading}  // Disable button while loading
+            className={`w-full py-2 px-4 rounded-md text-white ${
+              loading ? 'bg-gray-600 cursor-not-allowed' : 'bg-[#380E0D] hover:bg-[#3a1514]'
+            }`}
           >
-            Login
+            {loading ? (
+              <div className="flex items-center justify-center">
+                Logging in <FaSpinner className="animate-spin ml-2" />  {/* Spinner with "Logging in" */}
+              </div>
+            ) : (
+              'Login'
+            )}
           </button>
         </form>
       </div>

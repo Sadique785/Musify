@@ -42,14 +42,13 @@ function Login() {
         if (response.status == 200){
           console.log("Login Success");
           console.log(response);
-          const {refreshToken, accessToken, user} = response.data.data
           dispatch(loginSuccess({
-            user,
-            accessToken,
-            refreshToken,
+            user:response.data.data.user,
+            accessToken:response.data.data.accessToken,
+            refreshToken:response.data.data.refreshToken,
+            csrfToken:response.data.data.csrfToken,
 
-
-          }))
+          }));
 
           setTimeout(() => {
             navigate('/feed')
@@ -115,7 +114,10 @@ function Login() {
 
 
         if (response.status === 200) {
+          console.log('Csrf from response :',response.data.data.csrfToken );
+          
           toast.success('Login Success')
+
           dispatch(loginSuccess({
             user:response.data.data.user,
             accessToken:response.data.data.accessToken,

@@ -1,11 +1,34 @@
-import React, { useContext } from 'react';
+import React, { useContext,useEffect, useState } from 'react';
 import { FaImage, FaVideo, FaMusic, FaUser } from 'react-icons/fa';
 import { ProfileContext } from '../../../context/ProfileContext';
+import axiosInstance from '../../../axios/authInterceptor';
+import {toast} from 'react-hot-toast';
 
 function ProfileMid() {
 
   const { profile } = useContext(ProfileContext)
   const gatewayUrl = import.meta.env.VITE_BACKEND_URL
+
+  const [contentData, setContentData] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const response = await axiosInstance.get('/content/first/');
+        setContentData(response.data);
+
+
+      } catch (err) {
+        setError('Error fetching content');
+        toast.error(error)
+        console.error('Error fetching content:', err);
+      }
+    };
+
+    fetchContent(); // Call the function when the component is loaded
+  }, []);
+  
 
 
   return (
