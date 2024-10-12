@@ -65,6 +65,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+AUTH_USER_MODEL = 'posts.ContentUser'
 
 
 
@@ -127,6 +128,7 @@ REST_FRAMEWORK = {
       'content.authenticate.CustomAuthentication',
   ),
 }
+
 
 
 from datetime import timedelta
