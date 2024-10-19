@@ -2,7 +2,9 @@ import React from 'react'
 
 function FeedRight() {
   return (
-    <div>FeedRight</div>
+    <div className='fixed right-0 '>
+      FeedRight
+      </div>
   )
 }
 

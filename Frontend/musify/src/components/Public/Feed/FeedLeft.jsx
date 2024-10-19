@@ -18,7 +18,7 @@ function FeedLeft() {
     const buttonClass = "flex items-center space-x-3 p-2 mb-2 rounded-lg transition";
 
     return (
-        <div className='ml-[90px]'>
+        <div className='ml-[90px] fixed left-0'>
           <button
             onClick={() => handleContentChange('trending')}
             className={`${buttonClass} ${selectedContent === 'trending' ? 'bg-gray-200 w-56 font-semibold' : 'hover:bg-gray-200 w-56'}`}

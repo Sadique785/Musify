@@ -11,7 +11,7 @@ function RightSection() {
   const isProfile = location.pathname.includes('/profile');
 
   return (
-    <div className="w-1/4 p-4 feed-container bg-gray-100">
+    <div className="w-1/4   p-4 feed-container ">
       {isFeedPage  && <FeedRight /> }
       {isLibraryPage && <LibRight />}
       {isProfile && <ProfileRight />}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast'; 
 import axiosInstance from '../../axios/adminInterceptor';
@@ -6,12 +6,22 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux'; 
 import { loginSuccess } from '../../redux/auth/Slices/authSlice'; 
 import { FaSpinner } from 'react-icons/fa';  // Import spinner icon
+import { useSelector } from 'react-redux';
 
 function AdminLogin() {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const navigate = useNavigate();
+  const token = useSelector((state) => state.auth.accessToken)
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);  // Loading state
+
+  useEffect(() => {
+    if (token !==''){
+      navigate('/admin/dashboard')
+    }
+
+  }, [token])
+  
 
   const onSubmit = async (data) => {
     setLoading(true);  // Start loading animation

@@ -21,7 +21,7 @@ function FeedMid() {
   };
 
   return (
-    <div className="main-content mt-4">
+    <div className="main-content">
       {renderContent()}
     </div>
   );

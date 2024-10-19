@@ -6,6 +6,7 @@ import UserManagement from "../pages/Admin/Protected/ManageUsers";
 import NotFound from "../components/Public/NotFound";
 import { Toaster } from 'react-hot-toast';
 import AdminDetail from "../pages/Admin/Protected/AdminDetail";
+import ManageContent from "../pages/Admin/Protected/ManageContent";
 
 
 
@@ -26,6 +27,7 @@ function AdminRoutes() {
       <Route element={<AdminWrapper />}> {/* Correct closing tag */}
         <Route path="/dashboard" element={<AdminDashboard />} />
         <Route path="/users" element={<UserManagement />} />
+        <Route path="/content" element={<ManageContent />} />
         <Route path="/users/details/:id" element={<AdminDetail />} />
 
       </Route>

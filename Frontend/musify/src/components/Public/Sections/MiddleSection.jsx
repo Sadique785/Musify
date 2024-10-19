@@ -12,7 +12,7 @@ function MiddleSection() {
 
 
   return (
-    <div className="w-2/4 p-4 feed-container bg-white">
+    <div className="w-2/4 p-4 mid-container bg-white">
       {isFeedPage && <FeedMid />}
       {isLibraryPage && <LibMid />}
       {isProfile && <ProfileMid  />}

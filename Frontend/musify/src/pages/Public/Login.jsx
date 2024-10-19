@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../../components/Public/navbars/Header';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
@@ -24,12 +24,17 @@ function Login() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const acc = useSelector((state) => state.auth.accessToken);
-  console.log(acc, 'acc');
+  const token = useSelector((state) => state.auth.accessToken)
+
+  useEffect(() => {
+    if (token === ''){
+      navigate('/feed');
+    }
+
+  },[token, navigate]);
   
   const login = useGoogleLogin({
     onSuccess: async tokenResponse => {
-      console.log(tokenResponse)
       const accessToken = tokenResponse.access_token;
 
 

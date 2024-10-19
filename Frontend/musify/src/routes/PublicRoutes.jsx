@@ -13,6 +13,7 @@ import Library from "../pages/User/Library";
 import Settings from "../pages/User/Settings";
 import NotFound from "../components/Public/NotFound";
 import { Toaster } from "react-hot-toast";
+import { ProfileProvider } from "../context/ProfileContext";
 
 
 
@@ -36,7 +37,9 @@ function PublicRoutes() {
 
             
             <Route element={<ResetWrapper> 
-                             <UserWrapper />
+                <ProfileProvider>
+                     <UserWrapper />
+                </ProfileProvider>
                            </ResetWrapper>}
             >
                 <Route path="/feed" element={<Feed />} />

@@ -27,6 +27,9 @@ function AdminHeader({adminProfileImage}) {
     } else if (location.pathname.includes("details")) {
       return "User Details";
       
+    } else if (location.pathname.includes("content")) {
+      return "Manage Posts";
+      
     } else {
       return "Admin Panel";
     }

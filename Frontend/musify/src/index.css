@@ -45,10 +45,58 @@ html {
     height: auto;
 }
 .feed-container {
-    margin-top: 80px; /* Adjust based on the header height */
+    margin-top: 80px;
+     /* Adjust based on the header height */
   }
-
-.reverse-container{
-    margin-top: -80px;
+.mid-container {
+    margin-top: 50px;
 }
 
+/* Feed.css */
+.feed-left,
+.feed-right {
+  position: fixed;
+  top: 80px; /* Adjust based on your header height */
+  bottom: 0;
+  width: 250px; /* Adjust based on your design */
+  overflow-y: auto; /* If you want the left and right sections to have scrollable content */
+}
+
+.feed-left {
+  left: 0;
+}
+
+.feed-right {
+  right: 0;
+}
+
+.feed-mid {
+  margin-left: 250px; /* Same as the width of feed-left */
+  margin-right: 250px; /* Same as the width of feed-right */
+  padding: 16px;
+  flex: 1;
+  height: calc(100vh - 80px); /* Full height minus header */
+  overflow-y: auto; /* Allow scrolling */
+  background-color: #fff; /* Background color for middle section */
+}
+
+
+.reverse-container{
+    margin-top: -60px;
+}
+
+.animate-pulse {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.75;
+  }
+}

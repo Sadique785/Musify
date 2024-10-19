@@ -9,6 +9,7 @@ import LoadingSpinner from './InnerComponents/LoadingSpinner';
 import EmptyState from './InnerComponents/EmptyState';
 import MediaDisplay from './InnerComponents/MediaDisplay';
 
+
 function ProfileMid() {
 
   const { profile } = useContext(ProfileContext)
@@ -33,7 +34,7 @@ function ProfileMid() {
       try {
         const response = await axiosInstance.get('/content/uploads/');
         console.log("Response from uploads endpoint:", response.data); // Log the response data
-        setMediaData(response.data); // Update state with fetched data
+        setMediaData(response.data.results); // Update state with fetched data
       } catch (error) {
         console.error('Error fetching media data', error);
       } finally {
@@ -57,6 +58,8 @@ function ProfileMid() {
       setDescription('');
       setIsModalOpen(false);
     };
+
+
     const handleVerifySession = async () => {
       try {
         const response = await axiosInstance.get('/content/verify-user/');

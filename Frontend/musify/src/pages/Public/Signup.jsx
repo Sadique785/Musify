@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "../../components/Public/navbars/Header";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import axios from "axios";
 import toast from 'react-hot-toast'
+import { useSelector } from "react-redux";
+
 
 function Signup() {
     const [email, setEmail] = useState("");
@@ -21,7 +23,14 @@ function Signup() {
     const navigate = useNavigate()
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
-    console.log(backendUrl);
+    const token = useSelector((state) => state.auth.accessToken)
+  
+    useEffect(() => {
+        if (token === ''){
+            navigate('/feed');
+          }
+  
+    },[token, navigate]);
 
     const togglePassword = () => {
         setShowPassword(!showPassword);
