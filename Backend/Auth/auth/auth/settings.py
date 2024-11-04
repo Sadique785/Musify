@@ -62,13 +62,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'authentication',
+    'authentication.apps.AuthenticationConfig',
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'admin_side',
     'django_redis',
+    'friends',
     
 ]
 
@@ -283,4 +284,8 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True)
 # EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', True)
 
 
+
+KAFKA_CONFIG = {
+    'bootstrap.servers': 'localhost:9092',  # Adjust as needed
+}
 

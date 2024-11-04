@@ -16,10 +16,10 @@ from authentication.api.services.send_otp import send_otp
 from django.views.decorators.csrf import ensure_csrf_cookie 
 from authentication.models import CustomUser, Profile, Talent, Genre
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
-from .serializers import UserRegisterSerializer, VerifyEmailSerializer, UserLoginSerializer, ProfileImageSerializer, ProfileSerializer, GoogleLoginSerializer
+from .serializers import UserRegisterSerializer, VerifyEmailSerializer, UserLoginSerializer, ProfileImageSerializer, ProfileSerializer, ProfileViewSerializer,  GoogleLoginSerializer
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-
+from authentication.kafka_utils.producer import KafkaProducerService
 
 
 
@@ -86,12 +86,6 @@ class VerifyOtp(APIView):
             email = serializer.validated_data.get("email")
             otp = serializer.validated_data.get("otp")
 
-            print('Send by user', email, otp)
-            
-
-            print("OTP in session:", request.session.get('email_otp'))
-            print("Email in session:", request.session.get('email_for_otp'))
-            print("User data in session:", request.session.get('user_data'))
             session_otp = request.session.get('email_otp')
             session_email = request.session.get('email_for_otp')
 
@@ -108,11 +102,29 @@ class VerifyOtp(APIView):
 
             user_data = request.session.get('user_data')
             if user_data:
+                print('userdata to send', user_data)
                 user = CustomUser.objects.create(**user_data, email_verified=True)
                 user.save()
                 print('reached here')
 
-                Profile.objects.get_or_create(user=user)
+                profile, created = Profile.objects.get_or_create(user=user)
+                image_url = profile.image.url if profile.image else None 
+
+                content_user_data = {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'is_admin': user.is_staff,  # Map is_staff to is_admin
+                    'created_at': user.created_at.isoformat(),  # Convert to ISO format
+                    'updated_at': user.updated_at.isoformat(),  # Convert to ISO format
+                    'image_url': image_url
+                }
+
+                print('this is the new user_data', content_user_data)
+                
+
+                kafka_producer = KafkaProducerService(config={})  # Add actual config here
+                kafka_producer.send_user_creation_message(content_user_data)
 
 
                 request.session.pop('email_otp', None)
@@ -402,37 +414,34 @@ class LogoutView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
-
 class FetchProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
-
-    print('got into fetch-profile')
-    def get(self, request):
-
-        print('headers', request.headers)
+    def get(self, request, username=None):
         try:
-            print(request.user)
-            profile = Profile.objects.get(user=request.user)
-            print(profile)
-            response_data = {
-                'username': profile.user.username,
-                'image_url': profile.image.url if profile.image else None,
-                'location': profile.location,
-                'gender': profile.gender,
-                'date_of_birth': profile.date_of_birth,
-                'talents': [talent.name for talent in profile.talents.all()],
-                'genres': [genre.name for genre in profile.genres.all()],
-            }
-            print(response_data)
-            return Response(response_data, status=status.HTTP_200_OK)
+            # Fetch the user based on the username if provided, else use the request user
+            if username:
+                user = CustomUser.objects.filter(username=username).first()
+                if not user:
+                    return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+            else:
+                user = request.user
+
+            # Get the profile and serialize it
+            profile = Profile.objects.get(user=user)
+            serializer = ProfileViewSerializer(profile, context = {"request": request})
+            print("Serialized image_url:", serializer.data.get('image_url'))  # Debugging line
+
+
+            # Return the serialized data
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
         except Profile.DoesNotExist:
             return Response({"error": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
-
+        
+    
 class EditProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -441,8 +450,25 @@ class EditProfileView(APIView):
         try:
             profile = Profile.objects.get(user=request.user)
             serializer = ProfileSerializer(profile, data=request.data, partial=True)
+
             if serializer.is_valid():
                 serializer.save()
+
+                request.user.refresh_from_db()
+
+                updated_user_data = {
+                    'id':request.user.id,
+                    'username':request.user.username,
+                    'email':request.user.email,
+                    'image_url':profile.image.url,
+                    
+                }
+                print('Guys this is the updated user data' ,updated_user_data)
+
+                kafka_producer = KafkaProducerService(config={})
+                kafka_producer.send_user_updation_message(updated_user_data)
+
+                print('here is the serializer data',serializer.data)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Profile.DoesNotExist:
@@ -464,10 +490,26 @@ class ChangeProfileImageView(APIView):
         print('Profile found:', profile.id)
 
         if 'image' in request.FILES:
-            print('Image file found')
+            print('First Image  file found', profile.image.url)
             profile.image = request.FILES['image']
             profile.save()
+            print('second  Image  file found', profile.image.url)
+
             print('Profile image updated')
+
+            request.user.refresh_from_db()
+            new_user = request.user
+
+            updated_image_data = {
+                'id': new_user.id,
+                'username': new_user.username,
+                'email': new_user.email,
+                'image_url':profile.image.url if profile.image else None
+            }
+
+            kafka_producer = KafkaProducerService(config={})
+            kafka_producer.send_user_updation_message(updated_image_data)
+
 
             serializer = ProfileImageSerializer(profile)
             print('Serializer data:', serializer.data)

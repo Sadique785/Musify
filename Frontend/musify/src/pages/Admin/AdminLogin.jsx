@@ -16,7 +16,7 @@ function AdminLogin() {
   const [loading, setLoading] = useState(false);  // Loading state
 
   useEffect(() => {
-    if (token !==''){
+    if (token ===''){
       navigate('/admin/dashboard')
     }
 

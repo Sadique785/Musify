@@ -1,19 +1,39 @@
 from django.db import models
 from django.conf import settings
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 
 
 
+
+class CustomUserManager(BaseUserManager):
+    def create_user(self, username, email, id, password=None, **extra_fields):
+        if not id:
+            raise ValueError('The id must be set')  # Ensure an id is provided
+        email = self.normalize_email(email)
+        user = self.model(username=username, email=email, id=id, **extra_fields)  # Set the id here
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, username, email, id, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+
+        return self.create_user(username, email, id, password, **extra_fields)
 
 class ContentUser(AbstractUser):
-    # Add your additional fields here
-    user_id = models.IntegerField(unique=True)  # Unique ID from auth service
+    id = models.IntegerField(primary_key=True)  # Define id as the primary key
     is_admin = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     password = None
+    image_url = models.URLField(blank=True, null=True)
 
-    # Add related_name to avoid conflicts
     groups = models.ManyToManyField(
         'auth.Group',
         related_name='contentuser_set',  
@@ -23,14 +43,17 @@ class ContentUser(AbstractUser):
     )
     user_permissions = models.ManyToManyField(
         'auth.Permission',
-        related_name='contentuser_set',  # Custom related name for ContentUser
+        related_name='contentuser_set',  
         blank=True,
         help_text='Specific permissions for this user.',
         verbose_name='user permissions',
     )
 
+    objects = CustomUserManager()
+
     def __str__(self):
-        return self.username  
+        return self.username
+
     
 
 

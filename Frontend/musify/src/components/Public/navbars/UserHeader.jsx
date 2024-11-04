@@ -1,8 +1,20 @@
-import React from "react";
+import React, { useContext } from "react";
 import { NavLink, Link } from "react-router-dom";
 import { FaPlus, FaHome, FaSearch, FaCompass, FaStar, FaBell, FaCommentDots, FaUser } from "react-icons/fa";
+import { ProfileContext } from "../../../context/ProfileContext";
+import { useSelector } from "react-redux";
 
 function UserHeader() {
+
+
+
+  const { profile } = useContext(ProfileContext);
+  const username = profile.username
+  const backendUrl = import.meta.env.VITE_BACKEND_URL
+  console.log(profile.username); 
+  
+
+
   return (
     <header className="bg-white fixed w-full transition duration-200 p-2 z-50 shadow-md">
       <div className="container flex mx-auto justify-between items-center">
@@ -72,12 +84,23 @@ function UserHeader() {
             <FaBell className="text-gray-700 hover:text-black cursor-pointer text-xl" />
             <FaCommentDots className="text-gray-700 hover:text-black cursor-pointer text-xl" />
 
-            {/* Profile Button */}
-            <Link to={"/profile"}>
-            <button className="flex items-center justify-center bg-gray-300 rounded-full p-2 hover:bg-gray-400 transition duration-200">
-              <FaUser className="text-gray-600 text-xl" />
-            </button>
-            </Link>
+{/* Profile Button */}
+<Link to={`/profile/${username}`}>
+    <button className={`flex items-center justify-center bg-gray-300 rounded-full${profile.imageUrl ? '':'p-2'}  hover:bg-gray-400 transition duration-200`}>
+        {profile.imageUrl ? (
+            <img
+                src={`${backendUrl}${profile.imageUrl}`}
+                alt="Profile Preview"
+                className="w-8 h-8 rounded-full object-cover" // Ensure the image fills the button
+            />
+        ) : (
+          <div className="w-8 h-8 rounded-full  flex items-center justify-center"> {/* Added border */}
+          <FaUser className="text-gray-600 text-xl" />
+      </div>
+        )}
+    </button>
+</Link>
+
 
 
             {/* Create Button */}

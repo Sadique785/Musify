@@ -1,14 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { FaCamera, FaUser, FaTimes } from "react-icons/fa";
 import axiosInstance from "../../../../axios/authInterceptor"; // Adjust the path as needed
 import talents from "../../Elements/Talents";
 import genres from "../../Elements/Genres";
 import toast, { Toaster } from 'react-hot-toast';
+import { useDispatch } from "react-redux";
+import { updateUsername } from "../../../../redux/auth/Slices/authSlice";
+import { ProfileContext } from "../../../../context/ProfileContext";
 
 function RightProfile() {
 
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL
+    const {setProfile: setGlobalProfile} = useContext(ProfileContext)
     const [profile, setProfile] = useState({
         username: "",
         imageUrl: "",
@@ -24,6 +28,9 @@ function RightProfile() {
     const [selectedTalents, setSelectedTalents] = useState([]);
     const [initialProfile, setInitialProfile] = useState(null);
     const [selectedGenres, setSelectedGenres] = useState([]);
+
+    const dispatch = useDispatch()
+
 
 
 
@@ -120,7 +127,7 @@ function RightProfile() {
             formData.append("image", selectedImage);
 
             try {
-                const response = await axiosInstance.post("/auth/change-profile-image/", formData, {
+                const response = await axiosInstance.put("/auth/change-profile-image/", formData, {
                     headers: {
                         "Content-Type": "multipart/form-data",
                     },
@@ -131,6 +138,10 @@ function RightProfile() {
                         ...prevProfile,
                         imageUrl: response.data.image,
                     }));
+                    setGlobalProfile((prevProfile) => ({
+                        ...prevProfile,
+                        imageUrl: response.data.image,
+                    }))
                     setTimeout(() => {
                         toggleModal();
                     }, 100);
@@ -196,6 +207,9 @@ function RightProfile() {
             const response = await axiosInstance.put("/auth/edit-profile/", updatedProfileData);
 
             if (response.status === 200) {
+                console.log( 'these datas are coming back',response.data)
+
+                
 
                 console.log("profile updated");
                 
@@ -207,6 +221,13 @@ function RightProfile() {
                     ...prevProfile,
                     ...updatedProfileData,
                 }));
+                setGlobalProfile((prevProfile) => ({
+                    ...prevProfile,
+                    username:updatedProfileData.username,
+                }))
+
+                dispatch(updateUsername({username: profile.username}));
+                
             } else {
                 // Show error toast
                 toast.error("Failed to update profile. Please try again.");
@@ -396,14 +417,14 @@ function RightProfile() {
   <div className="flex flex-wrap gap-4">
     {genres.map((genre) => (
       <div
-        key={genre.id}
-        onClick={() => handleGenreToggle(genre.name)}
-        className={`flex items-center cursor-pointer rounded-full px-3 py-1 text-sm font-bold ${
-          profile.genres.includes(genre.name)
-            ? 'bg-black text-white'
-            : 'bg-gray-200 text-black'
-        }`}
-      >
+            key={genre.id}
+            onClick={() => handleGenreToggle(genre.name)}
+            className={`flex items-center cursor-pointer rounded-full px-3 py-1 text-sm font-bold ${
+            profile.genres.includes(genre.name)
+                ? 'bg-black text-white'
+                : 'bg-gray-200 text-black'
+            }`}
+        >
         <div className="mr-2">{genre.icon}</div>
         <span>{genre.name}</span>
       </div>

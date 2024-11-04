@@ -15,6 +15,8 @@ function ManageUsers() {
   const [error, setError] = useState(null);
   const navigate  = useNavigate();
 
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
   // useEffect to fetch users data
   useEffect(() => {
     const fetchUserData = async () => {
@@ -54,7 +56,7 @@ function ManageUsers() {
 
       <div className="flex-grow bg-[#060E0E] text-white flex flex-col">
         {/* AdminHeader */}
-        <AdminHeader adminProfileImage={adminProfileImage} />
+        <AdminHeader  />
 
         {/* Main Content */}
         <div className="flex-grow p-10 relative overflow-y-auto">
@@ -96,7 +98,7 @@ function ManageUsers() {
                         <tr className="text-left border-b border-gray-600">
                           <th className="py-3 px-6">User</th>
                           <th className="py-3 px-6">Status</th>
-                          <th className="py-3 px-6">Phone</th>
+                          <th className="py-3 px-6">Email</th>
                           <th className="py-3 px-6">Role</th>
                           <th className="py-3 px-6">Is Admin</th>
                           <th className="py-3 px-6">Last Logged In</th>
@@ -112,7 +114,7 @@ function ManageUsers() {
                               onClick={() => seeDetails(user)} // Redirect on click
                             >
                               <img 
-                                src={user.profileImage || '/path-to-placeholder-image.jpg'} 
+                                src={user.profile_image ? `${backendUrl}${user.profile_image}` : '/logo/user1.png'}
                                 alt="User Profile" 
                                 className="w-8 h-8 rounded-full mr-3"
                               />
@@ -124,8 +126,8 @@ function ManageUsers() {
                               </span>
                             </td>
         
-                              <td className="py-3 px-6">{user.phone || 'N/A'}</td>
-                              <td className="py-3 px-6">{user.role}</td>
+                              <td className="py-3 px-6">{user.email || 'N/A'}</td>
+                              <td className="py-3 px-6">{user.user_role.charAt(0).toUpperCase() + user.user_role.slice(1)}</td>
                               <td className="py-3 px-6">
                                 <div className="flex items-center justify-center">
                                   {user.is_admin ? (

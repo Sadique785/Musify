@@ -44,7 +44,7 @@ class CustomAuthentication(JWTAuthentication):
 
         user_id = validated_token.get('user_id')
 
-        user = get_object_or_404(ContentUser, user_id=user_id)
+        user = get_object_or_404(ContentUser, id=user_id)
         print('User Found',user)
         print('validated token here', validated_token)
 

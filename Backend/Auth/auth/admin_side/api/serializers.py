@@ -22,7 +22,7 @@ class AdminLoginSerializer(serializers.Serializer):
             raise serializers.ValidationError('User account is inactive')
 
         # Check if the user is a superuser
-        if not user.is_superuser:
+        if not user.is_staff:
             raise serializers.ValidationError('You do not have admin privileges.')
 
         user = authenticate(username=email, password=password)
@@ -68,12 +68,25 @@ class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer(read_only=True)
     is_admin = serializers.BooleanField(source='is_staff', read_only=True)
     last_logged_in = serializers.DateTimeField(source='last_login', format='%Y-%m-%d', allow_null=True)
+    profile_image = serializers.SerializerMethodField()
+    user_role = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
         fields = [
             'id', 'username', 'email', 'is_active', 'is_admin', 
-            'last_logged_in', 'date_joined', 'profile'
+            'last_logged_in', 'date_joined', 'profile', 
+            'profile_image', 'user_role'
         ]
+
+    def get_profile_image(self, obj):
+        if hasattr(obj, 'user_profile') and obj.user_profile.image:
+            return obj.user_profile.image.url
+        return None
+    
+    def get_user_role(self, obj):
+        # Get the latest role assigned to the user
+        user_role = obj.user_roles.last()  # Assuming the last one is the most relevant
+        return user_role.role.name if user_role else 'User'  # Default to 'User' if no role is found
 
 

@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from authentication.models import CustomUser, Profile
+from authentication.models import CustomUser, Profile, Role, UserRole
 from .serializers import AdminLoginSerializer, UserSerializer  # Adjust import as needed
  # Adjust import as needed
 from django.conf import settings
@@ -57,7 +57,7 @@ class AdminLoginView(APIView):
                             "username": user.username,
                             "email": user.email,
                             "isActive": user.is_active,
-                            "isSuperuser": user.is_superuser,
+                            "isSuperuser": user.is_staff,
                         }
                     }
                 }
@@ -87,7 +87,7 @@ class FetchUsers(APIView):
         print("FetchUsers API accessed.")  # Print when the API is accessed
         
         # Fetch all users
-        users = CustomUser.objects.all()
+        users = CustomUser.objects.filter(is_superuser=False).exclude(id=request.user.id)
         print(f"Total users fetched: {users.count()}")  # Print the total number of users fetched
 
         # Serialize the user data
@@ -187,10 +187,25 @@ class MakeAdminView(APIView):
         try:
 
             user = CustomUser.objects.get(id=user_id) 
-            print(user)
-            user.is_staff = True  
-            user.save() 
-            return Response({"message": "User has been made an admin."}, status=status.HTTP_200_OK)
+
+            admin_role, _ = Role.objects.get_or_create(name="admin")
+            user_role, _ = Role.objects.get_or_create(name="user")
+
+            if user.is_staff:
+                user.is_staff = False
+                user.save()
+
+                UserRole.objects.update_or_create(user=user, defaults={'role': user_role})
+
+                message = "User has been demoted to a regular user."
+            else:
+                user.is_staff = True
+                user.save()
+
+                UserRole.objects.update_or_create(user=user, defaults={'role': admin_role})
+
+                message = "User has been promoted to admin." 
+            return Response({"message": message}, status=status.HTTP_200_OK)
         except CustomUser.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -234,7 +249,6 @@ class AdminLogoutView(APIView):
         print('Admin logout initiated')
 
         try:
-            # Get refresh token from the cookies or headers
             refresh_token = request.COOKIES.get('refresh_token')
             print(f"Refresh token: {refresh_token}")
 
@@ -242,11 +256,10 @@ class AdminLogoutView(APIView):
                 try:
                     token = RefreshToken(refresh_token)
                     print(f"Token before blacklisting: {token}")
-                    token.blacklist()  # Blacklist the refresh token
+                    token.blacklist() 
                 except TokenError as e:
                     print(f"Token error (invalid or expired): {str(e)}")
 
-            # Log out the admin (invalidate the session, if any)
             logout(request)
 
             # Create the response and delete the cookies

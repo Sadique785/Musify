@@ -2,6 +2,9 @@ from rest_framework import serializers
 from ..models import CustomUser, Role, UserRole, Profile, Talent, Genre
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate
+from friends.models import FriendList, FriendRequest
+from django.conf import settings
+
 
 
 
@@ -158,4 +161,100 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 
+
+class TalentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Talent
+        fields = ['name']
+
+class GenreSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Genre
+        fields = ['name']
+
+
+
+class ProfileViewSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username')  # Accessing the username from the related `user`
+    user_id = serializers.IntegerField(source='user.id')
+    image_url = serializers.SerializerMethodField()  
+    talents = serializers.SerializerMethodField()
+    genres = serializers.SerializerMethodField()
+    following_count = serializers.SerializerMethodField()  
+    followers_count = serializers.SerializerMethodField()  
+    follow_status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Profile
+        fields = [
+            'username', 
+            'user_id',
+            'image_url', 
+            'location', 
+            'gender', 
+            'date_of_birth', 
+            'talents', 
+            'genres', 
+            'following_count',  
+            'followers_count', 
+            'follow_status',
+        ]
+    def get_image_url(self, obj):
+        if obj.image:
+            return f"{settings.MEDIA_URL}{obj.image}"
+        return None
+
+    def get_talents(self, obj):
+        return [talent.name for talent in obj.talents.all()]
+
+    def get_genres(self, obj):
+        return [genre.name for genre in obj.genres.all()]
     
+    def get_following_count(self, obj):
+        friend_list = FriendList.objects.filter(user=obj.user).first()  
+        if friend_list:
+            return friend_list.following_count()  # Call the method from FriendList if it exists
+        else:
+            return FriendRequest.get_following_count(obj.user)  # Directly call the static method
+
+    def get_followers_count(self, obj):
+        friend_list = FriendList.objects.filter(user=obj.user).first()  
+        if friend_list:
+            return friend_list.followers_count()  # Call the method from FriendList if it exists
+        else:
+            return FriendRequest.get_followers_count(obj.user)
+
+    def get_follow_status(self, obj):
+        request = self.context.get('request')
+        
+        if not request or not request.user.is_authenticated:
+            print('it is returning from here')
+            return 'follow'
+
+        profile_user = obj.user
+        requesting_user = request.user
+
+        if requesting_user == profile_user:
+            return 'same_user'
+
+        # Check if already friends
+        if FriendList.objects.filter(user=profile_user, friends=requesting_user).exists():
+            print('Already friends, returning unfollow')
+            return 'unfollow'
+
+        # Check follow request statuses
+        following_request = FriendRequest.objects.filter(sender=requesting_user, receiver=profile_user, is_active=True).exists()
+        following_profile_user = FriendRequest.objects.filter(sender=profile_user, receiver=requesting_user, is_active=True).exists()
+        
+        # Debug output for request states
+        print(f"following_request (Micky following Dhinu-21): {following_request}")
+        print(f"following_profile_user (Dhinu-21 following Micky): {following_profile_user}")
+
+        if following_request and not following_profile_user:
+            return 'following'
+        elif following_profile_user and not following_request:
+            return 'follow back'
+        elif following_request and following_profile_user:
+            return 'unfollow'
+        else:
+            return 'follow'

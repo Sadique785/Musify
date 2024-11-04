@@ -9,6 +9,7 @@ const ProfileProvider = ({ children }) => {
     username: '',
     imageUrl: '',
   });
+  
 
   useEffect(() => {
     const fetchProfile = async () => {

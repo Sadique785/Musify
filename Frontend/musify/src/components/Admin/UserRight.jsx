@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 
-function UserRight({ userData, handleBlockUser, handleMakeAdmin }) {
+function UserRight({ userData, handleBlockUser, handleMakeAdmin, adminLoading, blockLoading }) {
 
   
   return (
@@ -36,18 +36,36 @@ function UserRight({ userData, handleBlockUser, handleMakeAdmin }) {
 
         {/* Stylish Buttons */}
         <div className="mt-6 flex justify-center space-x-4">
-          <button
-            onClick={handleBlockUser}
-            className="px-6 py-2 bg-red-600 text-white font-bold rounded-lg shadow-md hover:bg-red-700 transition duration-300 ease-in-out"
-          >
-            {userData.is_active ? 'Block User' : 'Unblock User'  }
-          </button>
-          <button
-            onClick={handleMakeAdmin}
-            className="px-6 py-2 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition duration-300 ease-in-out"
-          >
-            {userData.is_staff ? 'Revoke Admin' : 'Make Admin'}
-          </button>
+              <button
+                onClick={handleBlockUser}
+                disabled={blockLoading}
+                className="button-loading px-6 py-2 bg-red-600 text-white font-bold rounded-lg shadow-md hover:bg-red-700 transition duration-300 ease-in-out"
+              >
+                {blockLoading ? (
+                  <>
+                    <span>Processing...</span>
+                    <div className="loading-bar"></div>  {/* Loading Bar */}
+                  </>
+                ) : (
+                  userData.is_active ? 'Block User' : 'Unblock User'
+                )}
+              </button>
+
+              <button
+                onClick={handleMakeAdmin}
+                disabled={adminLoading}
+                className="button-loading px-6 py-2 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition duration-300 ease-in-out"
+              >
+                {adminLoading ? (
+                  <>
+                    <span>Processing...</span>
+                    <div className="loading-bar"></div>  {/* Loading Bar */}
+                  </>
+                ) : (
+                  userData.is_staff ? 'Revoke Admin' : 'Make Admin'
+                )}
+              </button>
+
         </div>
       </div>
     </div>

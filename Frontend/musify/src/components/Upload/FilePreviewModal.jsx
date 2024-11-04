@@ -1,14 +1,21 @@
-import React, { useState, useCallback } from 'react';
-import Cropper from 'react-easy-crop';
+import React, { memo, useState, useCallback } from 'react';
+import MediaPreview from './MediaPreview'; // Import the MediaPreview component
 import getCroppedImg from '../compUtils/cropImage';
-import { FaRegSmile } from 'react-icons/fa'; // Import the emoji icon
+import { FaRegSmile } from 'react-icons/fa';
 import EmojiPicker from 'emoji-picker-react';
 
-function FilePreviewModal({ file, isModalOpen, handleCloseModal, handleSaveFile, isVerifying, uploadProgress, description, setDescription }) {
+const FilePreviewModal = memo(function FilePreviewModal({
+  file, isModalOpen, handleCloseModal, handleSaveFile, 
+  isVerifying, uploadProgress, description, setDescription 
+}) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedArea, setCroppedArea] = useState(null);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false); // State for controlling the emoji picker
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const handleDescriptionChange = useCallback((e) => {
+    setDescription(e.target.value);
+  }, [setDescription]);
 
   const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
     setCroppedArea(croppedAreaPixels);
@@ -24,15 +31,11 @@ function FilePreviewModal({ file, isModalOpen, handleCloseModal, handleSaveFile,
   };
 
   const handleEmojiSelect = (emojiData) => {
-    setDescription((prev) => prev + emojiData.emoji); // Update description with selected emoji
-    setShowEmojiPicker(false); // Hide emoji picker after selection
+    setDescription((prev) => prev + emojiData.emoji);
+    setShowEmojiPicker(false);
   };
 
-  // Ensure the modal isn't shown when not needed
   if (!isModalOpen) return null;
-
-  // Check the file type and ensure it's an image
-  const isImage = file && file.type.startsWith('image/');
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
@@ -48,63 +51,41 @@ function FilePreviewModal({ file, isModalOpen, handleCloseModal, handleSaveFile,
         <h3 className="text-xl font-semibold mb-4 text-center">Preview</h3>
 
         <div className="mb-4 flex flex-col justify-center">
-          {isImage ? (
-            <>
-              <div className="relative w-full h-[400px]"> {/* Set a fixed height for the image area */}
-                <Cropper
-                  image={URL.createObjectURL(file)} // Ensure image URL is correct
-                  crop={crop}
-                  zoom={zoom}
-                  aspect={4 / 4}
-                  onCropChange={setCrop}
-                  onZoomChange={setZoom}
-                  onCropComplete={onCropComplete}
-                  cropShape="rect"
-                />
-              </div>
-              <div className="mt-2 text-center w-full">
-                <input
-                  type="range"
-                  min={1}
-                  max={3}
-                  step={0.1}
-                  value={zoom}
-                  onChange={(e) => setZoom(e.target.value)}
-                  className="w-full mt-2"
-                />
-              </div>
-            </>
-          ) : file && file.type.startsWith('video/') ? (
-            <video
-              src={URL.createObjectURL(file)}
-              controls
-              className="w-full h-auto max-h-[50vh] max-w-[70vw] object-contain"
-            />
-          ) : file && file.type.startsWith('audio/') ? (
-            <audio
-              src={URL.createObjectURL(file)}
-              controls
-              className="w-full"
-            />
-          ) : (
-            <div className="text-center text-red-500">
-              Unsupported file format
+          <MediaPreview
+            file={file}
+            crop={crop}
+            zoom={zoom}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={onCropComplete}
+          />
+          {/* Zoom control, only for images */}
+          {file && file.type.startsWith('image/') && (
+            <div className="mt-2 text-center w-full">
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.1}
+                value={zoom}
+                onChange={(e) => setZoom(e.target.value)}
+                className="w-full mt-2"
+              />
             </div>
           )}
         </div>
 
-        {/* Add description text area and emoji icon */}
         <div className="relative mb-4">
           <textarea
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={handleDescriptionChange}
             placeholder="What's new?"
             className="w-full p-2 border border-gray-300 rounded-lg mb-4 resize-none"
             rows="3"
           />
-          <FaRegSmile 
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)} // Toggle emoji picker
-            className="absolute bottom-8 right-3 cursor-pointer text-gray-500" // Set emoji icon color to gray
+          <FaRegSmile
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            className="absolute bottom-8 right-3 cursor-pointer text-gray-500"
             size={19}
           />
           {showEmojiPicker && (
@@ -121,7 +102,7 @@ function FilePreviewModal({ file, isModalOpen, handleCloseModal, handleSaveFile,
           >
             Close
           </button>
-          {isImage ? (
+          {file && file.type.startsWith('image/') ? (
             <button
               className="bg-[#421b1b] text-white px-4 py-2 rounded-full hover:bg-[#5c2727]"
               onClick={handleCropSave}
@@ -140,6 +121,6 @@ function FilePreviewModal({ file, isModalOpen, handleCloseModal, handleSaveFile,
       </div>
     </div>
   );
-}
+});
 
 export default FilePreviewModal;

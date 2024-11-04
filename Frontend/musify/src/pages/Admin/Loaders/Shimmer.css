@@ -1,0 +1,65 @@
+/* Shimmer.css */
+.shimmer-wrapper {
+    display: flex;
+    gap: 1.5rem;
+    padding: 2rem;
+  }
+  
+  .shimmer-user-left,
+  .shimmer-user-right {
+    background-color: #1a1f1f;
+    padding: 1rem;
+    border-radius: 8px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .shimmer-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: #333;
+    animation: shimmer 1.5s infinite linear;
+  }
+  
+  .shimmer-line {
+    height: 12px;
+    background: #333;
+    animation: shimmer 1.5s infinite linear;
+  }
+  
+  .shimmer-username {
+    width: 60%;
+    margin: 0.5rem 0;
+  }
+  
+  .shimmer-stat {
+    width: 30%;
+    margin-top: 0.3rem;
+  }
+  
+  .shimmer-activity-title,
+  .shimmer-activity-stat {
+    width: 80%;
+    margin-top: 0.5rem;
+  }
+  
+  .shimmer-buttons .shimmer-button {
+    width: 120px;
+    height: 30px;
+    border-radius: 5px;
+    background: #333;
+    animation: shimmer 1.5s infinite linear;
+  }
+  
+  @keyframes shimmer {
+    0% {
+      background-position: -150%;
+    }
+    100% {
+      background-position: 150%;
+    }
+  }
+  

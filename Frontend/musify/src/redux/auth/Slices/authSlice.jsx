@@ -34,8 +34,13 @@ const authSlice = createSlice({
     setAdminStatus: (state, action) => {
       state.isSuperuser = action.payload.isSuperuser;  // Dispatch to change admin status manually
     },
+    updateUsername: (state, action) => {
+      if(state.user){
+        state.user.username = action.payload.username
+      }
+    }
   },
 });
 
-export const { loginSuccess, logout, setAdminStatus } = authSlice.actions;
+export const { loginSuccess, logout, setAdminStatus, updateUsername } = authSlice.actions;
 export default authSlice.reducer;

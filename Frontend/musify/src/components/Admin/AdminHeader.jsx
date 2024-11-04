@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useContext } from "react";
 import { useLocation } from "react-router-dom";
 import { FaSearch, FaUserCircle, FaUser, FaSignOutAlt, FaSpinner } from 'react-icons/fa';  // Import FaSpinner for the loading icon
 import axiosInstance from "../../axios/adminInterceptor";
@@ -6,22 +6,23 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { logout } from "../../redux/auth/Slices/authSlice";
 import { persistor } from "../../redux/auth/userStore";
+import { AdminProfileContext } from "../../context/AdminProfileContext";
 
-function AdminHeader({adminProfileImage}) {
+function AdminHeader({}) {
   const location = useLocation();
-  // const [adminProfileImage, setAdminProfileImage] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for dropdown visibility
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const dropdownRef = useRef(null); // Ref for detecting clicks outside
   const navigate = useNavigate();  // For redirecting after logout
   const [loading, setLoading] = useState(false);  // State to track loading status
-
+  const {adminProfile} = useContext(AdminProfileContext)
+  const [adminProfileImage, setAdminProfileImage] = useState(null);
   const dispatch = useDispatch();
 
   const getPageTitle = () => {
     if (location.pathname === "/admin/dashboard") {
       return "Dashboard";
-    } else if (location.pathname === "/admin/manage-users") {
+    } else if (location.pathname.includes('users')) {
       return "Manage Users";
       
     } else if (location.pathname.includes("details")) {
@@ -35,18 +36,14 @@ function AdminHeader({adminProfileImage}) {
     }
   };
 
-  // Fetch the admin profile image
   useEffect(() => {
     const fetchAdminProfileImage = async () => {
-      try {
-        const response = await axiosInstance.get("/admin-side/fetch-profile-image/");
-        // setAdminProfileImage(response.data.profileImage);
-      } catch (error) {
-        console.error("Failed to fetch admin profile image:", error);
-      }
+
+      setAdminProfileImage(adminProfile.imageUrl)
+
     };
     fetchAdminProfileImage();
-  }, []);
+  }, [adminProfile]);
 
   // Handle clicks outside of dropdown to close it
   useEffect(() => {

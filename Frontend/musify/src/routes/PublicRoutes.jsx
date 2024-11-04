@@ -43,7 +43,9 @@ function PublicRoutes() {
                            </ResetWrapper>}
             >
                 <Route path="/feed" element={<Feed />} />
-                <Route path="/profile" element={<Profile />} />
+                {/* <Route path="/profile" element={<Profile />} /> */}
+                <Route path="/profile/:username" element={<Profile />} />
+
                 <Route path="/explore" element={<Explore />} /> 
                 <Route path="/library" element={<Library />} /> 
                 <Route path="/settings" element={<Settings />} /> 

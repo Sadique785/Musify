@@ -7,6 +7,8 @@ import NotFound from "../components/Public/NotFound";
 import { Toaster } from 'react-hot-toast';
 import AdminDetail from "../pages/Admin/Protected/AdminDetail";
 import ManageContent from "../pages/Admin/Protected/ManageContent";
+import { AdminProfileContext } from "../context/AdminProfileContext";
+import { AdminProfileProvider } from "../context/AdminProfileContext";
 
 
 
@@ -24,7 +26,12 @@ function AdminRoutes() {
       <Route path="/login" element={<AdminLogin />} />
 
       {/* Protected Admin Routes */}
-      <Route element={<AdminWrapper />}> {/* Correct closing tag */}
+      <Route element={
+        <AdminProfileProvider > 
+        <AdminWrapper />
+        </AdminProfileProvider>
+        
+        }> {/* Correct closing tag */}
         <Route path="/dashboard" element={<AdminDashboard />} />
         <Route path="/users" element={<UserManagement />} />
         <Route path="/content" element={<ManageContent />} />

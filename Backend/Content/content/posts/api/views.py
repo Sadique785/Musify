@@ -4,8 +4,11 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status, generics, permissions
 from .serializers import UploadSerializer, MediaSerializer, ContentSerializer, PostDetailSerializer, ReportedPostSerializer, LikeSerializer, CommentSerializer
-from posts.models import Upload, ReportedPost, Like, Comment
+from posts.models import Upload, ReportedPost, Like, Comment, ContentUser
 from django.db.models import Count
+from django.shortcuts import get_object_or_404
+
+
 
 
 
@@ -40,7 +43,6 @@ class SaveUploadView(APIView):
         serializer = UploadSerializer(data=request.data)
         print(request.user)
         print(request.user.id)
-        print(request.user.user_id)
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -58,7 +60,14 @@ class UserUploadsListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        user = self.request.user
+        username = self.kwargs.get('username', None)
+        
+        if username:
+            # Fetch the user by the provided username
+            user = get_object_or_404(ContentUser, username=username)
+        else:
+            # Default to the authenticated user if no username is provided
+            user = self.request.user
         return Upload.objects.filter(user=user).order_by('-created_at')
     
 
@@ -76,9 +85,6 @@ class TrendingContentView(generics.ListAPIView):
 
         return queryset
     
-    #     queryset = Upload.objects.annotate(
-    #         likes_count=Count('likes')
-    #     ).order_by('-likes_count', '-created_at')
 
     
     def get_serializer_context(self):
@@ -109,26 +115,7 @@ class ReportedContentView(generics.ListAPIView):
 
         return queryset
     
-# class LikePostView(generics.CreateAPIView):
-#     serializer_class = LikeSerializer
-#     permission_classes = [IsAuthenticated]
 
-#     def post(self, request, *args, **kwargs):
-#         user = request.user
-#         print('reached here at the like view')
-
-#         post_id = kwargs.get('post_id')
-#         post = Upload.objects.get(id=post_id)
-
-#         existing_like = Like.objects.filter(user=user, upload=post).first()
-#         if existing_like:
-#             existing_like.delete()
-#             return Response({'message':'Post unliked'}, status=status.HTTP_200_OK)
-
-#         else:
-#             Like.objects.create(user=user, upload=post)
-#             return Response({'message': 'Post liked'}, status=status.HTTP_201_CREATED)
-    
 
 class LikePostView(generics.CreateAPIView):
     serializer_class = LikeSerializer
@@ -157,5 +144,5 @@ class CommentPostView(generics.CreateAPIView):
         post = Upload.objects.get(id=post_id)
         content = request.data.get('content')
 
-        Comment.objects.create(user=user, post=post, content=content)
+        Comment.objects.create(user=user, upload=post, text=content)
         return Response({'message': 'Comment added'}, status=status.HTTP_201_CREATED)

@@ -9,6 +9,8 @@ import { FaVideo, FaUser, FaUpload } from 'react-icons/fa';
 import { toast } from 'react-hot-toast'
 import axios from 'axios';
 import PostDetailModal from '../InnerComponents/PostDetailModal';
+import PostCardLoader from '../../../../pages/Admin/Loaders/PostCardLoader';
+import FeedEmptyState from '../../Profile/InnerComponents/FeedEmptyState';
 
 
 
@@ -16,10 +18,13 @@ function MidTrending() {
 
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(''); // New error state
   const { profile } = useContext(ProfileContext);
   const [shouldRefresh, setShouldRefresh] = useState(false)
   const { imageUrl } = profile;
   const gatewayUrl = import.meta.env.VITE_BACKEND_URL
+  const [followStatus, setFollowStatus] = useState({}); 
+
 
 
 
@@ -30,6 +35,7 @@ function MidTrending() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [description, setDescription] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [uploadCount, setUploadCount] = useState(0);
 
   const [selectedPost, setSelectedPost] = useState(null);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
@@ -49,14 +55,30 @@ function MidTrending() {
   useEffect(() => {
     const fetchTrendingPosts = async () => {
       setLoading(true);
+      setError(''); 
+
       try {
         const response = await axiosInstance.get('/content/trending/');
         console.log("Fetched posts:", response.data);
+        if (response.data.results.length === 0) {
+          setError("No trending posts available at the moment.");
+        }
+
         setPosts(response.data.results);
+        const initialFollowStatus = {};
+      response.data.results.forEach(post => {
+        initialFollowStatus[post.user_id] = post.follow_status; // assuming post contains `is_followed` field
+      });
+      setFollowStatus(initialFollowStatus);
+      console.log(initialFollowStatus);
+      
+
       } catch (error) {
         console.error('Error fetching trending posts:', error);
+        setError("Failed to load trending posts. Please try again later."); 
       } finally {
         setLoading(false);
+        
       }
     };
 
@@ -78,6 +100,18 @@ function MidTrending() {
     };
   }, [isPostModalOpen]);
   
+
+  const updateFollowStatus = (userId, status) => {
+    setFollowStatus(prevStatus => ({
+        ...prevStatus,
+        [userId]: status,
+    }));
+};
+
+
+  useEffect(() => {
+    console.log('Updated followStatus:', followStatus);
+}, [followStatus]);
 
 
     // Handle file change
@@ -145,7 +179,6 @@ function MidTrending() {
         try {
           const response = await axios.post(cloudinaryUrl, formData, {
             onUploadProgress: (progressEvent) => {
-              // Calculate the upload percentage
               const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
               setUploadProgress(percentCompleted); // Update the upload progress state
             }
@@ -216,9 +249,11 @@ function MidTrending() {
       }
     };
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+    const handleRetry = () => {
+      window.location.reload()
+    }
+
+
 
   return (
     
@@ -267,18 +302,37 @@ function MidTrending() {
 
 
 
-        <div className='grid grid-cols-1 gap-6'>
-              {posts.map((post)=> (
-                <div key={post.id}  >
-                <PostCard
-                key={post.id}
-                onPostClick={() => openPostDetailModal(post)}
-                post={post}
-                 imageUrl={imageUrl} />
-              </div>
-              ))}
+{/* Error or Empty State Message */}
+{error ? (
+        <div className='flex flex-col items-center justify-center text-center mt-10'>
+          <FeedEmptyState
+            title="Oops!"
+            description={error}
+            onRetry={handleRetry}          />
 
         </div>
+      ) : loading ? (
+        [...Array(2)].map((_, index) => <PostCardLoader key={index} />)
+      ) : posts.length === 0 ? (
+        <EmptyState
+          title="No Trending Posts Yet"
+          description="Check back later or try refreshing."
+        />
+      ) : (
+        <div className='grid grid-cols-1 gap-6'>
+          {posts.map((post) => (
+            <PostCard
+              key={post.id}
+              onPostClick={() => openPostDetailModal(post)}
+              post={post}
+              imageUrl={imageUrl}
+              userId={post.user_id}
+              followStatus={followStatus[post.user_id] || 'follow'}
+              updateFollowStatus={updateFollowStatus}
+            />
+          ))}
+        </div>
+      )}
 
 
         {isPostModalOpen && (

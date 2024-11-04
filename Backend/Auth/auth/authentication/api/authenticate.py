@@ -5,6 +5,8 @@ from rest_framework.request import Request
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import AccessToken
 from django.conf import settings
+from django.utils import timezone
+
 
 def enforce_csrf(request):
     """Function to enforce CSRF checks."""
@@ -36,5 +38,10 @@ class CustomAuthentication(JWTAuthentication):
         validated_token = self.get_validated_token(raw_token)
 
         enforce_csrf(request)
+        user = self.get_user(validated_token)
 
-        return self.get_user(validated_token), validated_token
+        # Update the last_login field for the user
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
+
+        return user, validated_token

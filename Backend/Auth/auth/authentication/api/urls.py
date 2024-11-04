@@ -15,6 +15,8 @@ urlpatterns = [
     path('token/refresh/',TokenRefreshView.as_view(), name = 'token_refesh' ),
     path('edit-profile/',EditProfileView.as_view(), name = 'edit-profile' ),
     path('fetch-profile/',FetchProfileView.as_view(), name = 'fetch-profile' ),
+    path('fetch-profile/<str:username>/', FetchProfileView.as_view(), name='fetch-profile-with-username'),
+
     path('change-profile-image/', ChangeProfileImageView.as_view(), name='change-profile-image'),
      path('google-login/', GoogleLoginView.as_view(), name='google-login'),
 

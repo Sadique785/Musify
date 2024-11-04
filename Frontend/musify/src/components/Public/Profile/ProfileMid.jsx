@@ -1,6 +1,7 @@
 import React, { useContext,useEffect, useState } from 'react';
 import {  FaVideo, FaMusic, FaUser, FaUpload } from 'react-icons/fa';
 import { ProfileContext } from '../../../context/ProfileContext';
+import { UserProfileContext } from '../../../context/UserProfileProvider';
 import axiosInstance from '../../../axios/authInterceptor';
 import {toast} from 'react-hot-toast';
 import FilePreviewModal from '../../Upload/FilePreviewModal';
@@ -8,14 +9,21 @@ import axios from 'axios';
 import LoadingSpinner from './InnerComponents/LoadingSpinner';
 import EmptyState from './InnerComponents/EmptyState';
 import MediaDisplay from './InnerComponents/MediaDisplay';
+import {useSelector} from 'react-redux';
+import { useParams } from 'react-router-dom';
+import LoadingPlaceholder from '../../../pages/Admin/Loaders/LoadingPlaceholder';
 
 
 function ProfileMid() {
 
   const { profile } = useContext(ProfileContext)
+  const { userProfile } = useContext(UserProfileContext)
+  const loggedInUsername = useSelector((state) => state.auth.user?.username)
+  const { username } = useParams();
+  const isOwnProfile = loggedInUsername === username;   
+
   
   const gatewayUrl = import.meta.env.VITE_BACKEND_URL
-  const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_NAME}/upload`;
   const [mediaData, setMediaData] = useState([]);
   const [loading, setLoading] = useState(true); 
 
@@ -28,22 +36,27 @@ function ProfileMid() {
   const [uploadCount, setUploadCount] = useState(0);
   const [description, setDescription] = useState('');
 
+
   useEffect(() => {
     const fetchMediaData = async () => {
-      setLoading(true); 
+      setLoading(true);
       try {
-        const response = await axiosInstance.get('/content/uploads/');
-        console.log("Response from uploads endpoint:", response.data); // Log the response data
-        setMediaData(response.data.results); // Update state with fetched data
+        const url = isOwnProfile
+          ? `/content/uploads/`
+          : `/content/uploads/${username}/`;
+
+        const response = await axiosInstance.get(url);
+        console.log("Response from uploads endpoint:", response.data);
+        setMediaData(response.data.results);
       } catch (error) {
         console.error('Error fetching media data', error);
       } finally {
-        setLoading(false); // Set loading to false after fetching
+        setLoading(false);
       }
     };
-  
+
     fetchMediaData();
-  }, [uploadCount]); // Run again when uploadCount changes
+  }, [uploadCount, isOwnProfile, username]); 
   
 
 
@@ -106,7 +119,7 @@ function ProfileMid() {
           return;
         }
     
-        const folder = `musify/users/${fileType}/${profile.username}/`;
+        const folder = `musify/users/${fileType}/${userProfile.username}/`;
     
         const formData = new FormData();
         formData.append('file', file);
@@ -134,7 +147,7 @@ function ProfileMid() {
               file_url: fileUrl,
               file_type: fileType,
               folder: folder,
-              username: profile.username,
+              username: userProfile.username,
               description: description,
             });
     
@@ -205,9 +218,9 @@ function ProfileMid() {
    
         <div className="w-10 h-10 bg-gray-300 rounded-full overflow-hidden flex items-center justify-center mr-4">
 
-          {profile.imageUrl?(
+          {userProfile.imageUrl?(
             <img
-            src={`${gatewayUrl}${profile.imageUrl}`}
+            src={`${gatewayUrl}${userProfile.imageUrl}`}
             alt="Profile"
             className="w-full h-full object-cover transition duration-300 ease-in-out"
           />
@@ -226,33 +239,34 @@ function ProfileMid() {
             readOnly
           />
 
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2">
+            {isOwnProfile && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2">
+                          <label htmlFor="file-upload">
+                            <FaUpload className="text-gray-600 h-4 w-4 cursor-pointer" />
+                          </label>
+                          <input
+                            id="file-upload"
+                            type="file"
+                            accept="image/*,video/*,audio/*"
+                            style={{ display: 'none' }}
+                            onChange={handleFileChange}
+                          />
+                          <FaVideo className="text-gray-600 h-4 w-4 cursor-pointer" />
+                        </div>
+                      )}
 
-          <label htmlFor="file-upload">
-            <FaUpload className="text-gray-600 h-4 w-4 cursor-pointer" />
-          </label>
 
-            <input 
-            id='file-upload'
-            type="file"
-            accept='image/*,video/*,audio/*'
-            style={{display:'none'}}
-            onChange={handleFileChange}
-             />
-            <FaVideo className="text-gray-600  h-4 w-4 cursor-pointer" />
-          </div>
         </div>
       </div>
 
-      {loading ? (
-  <div className="flex justify-center items-center w-full h-full mt-[-200px] md:mt-[-150px] sm:mt-[-100px]">
-    <LoadingSpinner />
-  </div>
-) : mediaData.length === 0 ? (
-  <EmptyState />
-) : (
-  <MediaDisplay mediaData={mediaData} />
-)}
+            {/* Your other code */}
+            {loading ? (
+                <LoadingPlaceholder /> // Use the new LoadingPlaceholder component here
+            ) : mediaData.length === 0 ? (
+                <EmptyState />
+            ) : (
+                <MediaDisplay mediaData={mediaData} />
+            )}
 
 
         <FilePreviewModal
