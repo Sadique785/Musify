@@ -7,15 +7,16 @@ const UserProfileContext = createContext();
 const UserProfileProvider = ({ children, username }) => {
   const [userProfile, setUserProfile] = useState({
     username: '',
-    userId:null,
+    userId: null,
     imageUrl: '',
     followersCount: 0,
     followingCount: 0,
     talents: [],
     genres: [],
-    followStatus:'',
+    followStatus: '',
   });
   const [loading, setLoading] = useState(true);
+  const [isBlocked, setIsBlocked] = useState(false);  // New state for blocked status
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -23,16 +24,22 @@ const UserProfileProvider = ({ children, username }) => {
       try {
         const response = await axiosInstance.get(username ? `/auth/fetch-profile/${username}/` : `/auth/fetch-profile/`);
         if (response.status === 200) {
-            console.log('data from Provider 2',response.data)
+          console.log('Data from Provider', response.data);
+
+          // Check if the user is blocked and set the state accordingly
+          const blocked = response.data.is_blocked || false;
+          setIsBlocked(blocked);
+
+          // If not blocked, set all profile details; else, limit data
           setUserProfile({
             username: response.data.username,
-            userId:response.data.user_id,
+            userId: response.data.user_id,
             imageUrl: response.data.image_url,
-            followersCount: response.data.followers_count,
-            followingCount: response.data.following_count,
-            talents: response.data.talents || [],
-            genres: response.data.genres || [],
-            followStatus:response.data.follow_status,
+            followersCount: blocked ? 0 : response.data.followers_count,
+            followingCount: blocked ? 0 : response.data.following_count,
+            talents: blocked ? [] : response.data.talents || [],
+            genres: blocked ? [] : response.data.genres || [],
+            followStatus: blocked ? '' : response.data.follow_status,
           });
         }
       } catch (error) {
@@ -46,7 +53,7 @@ const UserProfileProvider = ({ children, username }) => {
   }, [username]);
 
   return (
-    <UserProfileContext.Provider value={{ userProfile, setUserProfile, loading }}>
+    <UserProfileContext.Provider value={{ userProfile, setUserProfile, loading, isBlocked }}>
       {children}
     </UserProfileContext.Provider>
   );

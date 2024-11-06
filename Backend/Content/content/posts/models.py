@@ -33,6 +33,12 @@ class ContentUser(AbstractUser):
     updated_at = models.DateTimeField(auto_now=True)
     password = None
     image_url = models.URLField(blank=True, null=True)
+    blocked_users = models.ManyToManyField(
+        'self',
+        symmetrical=False,
+        related_name='blocked_by',
+        blank=True
+    )
 
     groups = models.ManyToManyField(
         'auth.Group',
@@ -84,6 +90,23 @@ class Upload(models.Model):
         return self.liked_by.count()
 
 
+class Comment(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='comments'
+    )
+    upload = models.ForeignKey(
+        'Upload', 
+        on_delete=models.CASCADE, 
+        related_name='comments'
+    )
+    text = models.TextField() 
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} commented on {self.upload.id}"
 
 class Like(models.Model):
     user = models.ForeignKey(
@@ -115,23 +138,6 @@ class Like(models.Model):
 
 
 
-class Comment(models.Model):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.CASCADE, 
-        related_name='comments'
-    )
-    upload = models.ForeignKey(
-        'Upload', 
-        on_delete=models.CASCADE, 
-        related_name='comments'
-    )
-    text = models.TextField() 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"{self.user.username} commented on {self.upload.id}"
 
 
 class Share(models.Model):

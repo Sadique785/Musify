@@ -263,7 +263,7 @@ function ProfileMid() {
             {loading ? (
                 <LoadingPlaceholder /> // Use the new LoadingPlaceholder component here
             ) : mediaData.length === 0 ? (
-                <EmptyState />
+                <EmptyState isOwnProfile={isOwnProfile} />
             ) : (
                 <MediaDisplay mediaData={mediaData} />
             )}

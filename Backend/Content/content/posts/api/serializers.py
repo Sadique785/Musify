@@ -56,7 +56,6 @@ class ContentSerializer(serializers.ModelSerializer):
         if requesting_user == post_user:
             return 'same_user'
 
-        # Check if they are already friends
         if FriendList.objects.filter(user=post_user, friends=requesting_user).exists():
             return 'unfollow'
 
@@ -104,6 +103,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class PostDetailSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField() 
+    user_id=serializers.IntegerField(source='user.id')
     likes_count = serializers.IntegerField(source='liked_by.count', read_only=True)
     comments_count = serializers.IntegerField(source='comments.count', read_only=True)
     shares_count = serializers.IntegerField(source='shares.count', read_only=True)
@@ -111,10 +111,11 @@ class PostDetailSerializer(serializers.ModelSerializer):
     is_liked = serializers.SerializerMethodField()
     recent_likes = serializers.SerializerMethodField()
 
+
     class Meta:
         model = Upload
         fields = [
-            'id', 'user', 'file_url', 'file_type', 'description',
+            'id', 'user', 'user_id', 'file_url', 'file_type', 'description',
             'likes_count', 'comments_count', 'shares_count',
             'comments', 'created_at', 'updated_at',
             'is_liked', 'recent_likes'
@@ -161,3 +162,16 @@ class ReportedPostSerializer(serializers.ModelSerializer):
         model = ReportedPost
         fields = ['id', 'post', 'post_title', 'reported_by', 'reported_by_username', 'report_reason', 'report_description', 'is_reviewed', 'created_at']
 
+
+class ReportedPostSerializer(serializers.ModelSerializer):
+    post_id = serializers.IntegerField()
+
+    class Meta:
+        model = ReportedPost
+        fields = ['post_id', 'report_reason', 'report_description']
+        
+    def create(self, validated_data):
+        post_id = validated_data.pop('post_id')
+        post = Upload.objects.get(id=post_id)  # Consider adding error handling here
+        reported_by = self.context['request'].user
+        return ReportedPost.objects.create(post=post, reported_by=reported_by, **validated_data)

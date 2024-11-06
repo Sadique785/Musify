@@ -3,9 +3,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status, generics, permissions
-from .serializers import UploadSerializer, MediaSerializer, ContentSerializer, PostDetailSerializer, ReportedPostSerializer, LikeSerializer, CommentSerializer
+from .serializers import UploadSerializer, MediaSerializer, ContentSerializer, PostDetailSerializer, ReportedPostSerializer, LikeSerializer, CommentSerializer, ReportedPostSerializer
 from posts.models import Upload, ReportedPost, Like, Comment, ContentUser
-from django.db.models import Count
+from django.db.models import Count, Q
+from friends_content.models import FriendList, FriendRequest
 from django.shortcuts import get_object_or_404
 
 
@@ -61,14 +62,17 @@ class UserUploadsListView(generics.ListAPIView):
 
     def get_queryset(self):
         username = self.kwargs.get('username', None)
-        
+        user = self.request.user
+
         if username:
-            # Fetch the user by the provided username
-            user = get_object_or_404(ContentUser, username=username)
+            target_user = get_object_or_404(ContentUser, username=username)
         else:
-            # Default to the authenticated user if no username is provided
-            user = self.request.user
-        return Upload.objects.filter(user=user).order_by('-created_at')
+            target_user = user
+
+        if target_user in user.blocked_users.all():
+            return Upload.objects.none()
+
+        return Upload.objects.filter(user=target_user).order_by('-created_at')
     
 
 
@@ -77,18 +81,75 @@ class TrendingContentView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        user = self.request.user  # The current authenticated user
+        
+        # Exclude posts from users blocked by the current user
+        blocked_users_ids = user.blocked_users.values_list('id', flat=True)
+        
+        # Exclude posts from users who have blocked the current user
+        users_that_blocked_me_ids = ContentUser.objects.filter(blocked_users=user).values_list('id', flat=True)
+
         queryset = Upload.objects.annotate(
                 likes_count=Count('liked_by')  # Change from 'likes' to 'liked_by'
+            ).filter(
+                is_active=True, 
+                is_private=False
+            ).exclude(
+                user_id__in=blocked_users_ids  # Exclude posts from blocked users
+            ).exclude(
+                user_id__in=users_that_blocked_me_ids  # Exclude posts from users who blocked the current user
             ).order_by('-likes_count', '-created_at')
-
-        queryset = queryset.filter(is_active=True, is_private=False)
 
         return queryset
     
-
-    
     def get_serializer_context(self):
         return {'request': self.request}
+
+
+class FollowingContentView(generics.ListAPIView):
+    serializer_class = ContentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user  # The current authenticated user
+
+        try:
+            # Get the mutual friends of the user
+            friend_list = FriendList.objects.get(user=user)
+            mutual_friends = friend_list.friends.all()
+        except:
+            mutual_friends = FriendList.objects.none()
+
+        # Get the list of users the current user is following
+        following_requests = FriendRequest.objects.filter(sender=user, is_active=True)
+        following_users = [request.receiver for request in following_requests]
+
+        # Combine mutual friends and following users
+        following_users_ids = set(mutual_friends.values_list('id', flat=True)) | set([user.id for user in following_users])
+
+        # Exclude blocked users (users who are blocked by the current user)
+        blocked_users_ids = user.blocked_users.values_list('id', flat=True)
+
+        # Exclude users who have blocked the current user
+        users_that_blocked_me_ids = ContentUser.objects.filter(blocked_users=user).values_list('id', flat=True)
+
+        # Get posts from users the current user is following, excluding blocked users and users who blocked the current user
+        queryset = Upload.objects.filter(
+            user_id__in=following_users_ids,
+            is_active=True,
+            is_private=False
+        ).exclude(
+            user_id__in=blocked_users_ids  # Exclude posts from blocked users
+        ).exclude(
+            user_id__in=users_that_blocked_me_ids  # Exclude posts from users who blocked the current user
+        ).annotate(
+            likes_count=Count('liked_by')
+        ).order_by('-likes_count', '-created_at')
+
+        return queryset
+
+
+
     
 class PostDetailView(generics.RetrieveAPIView):
     serializer_class = PostDetailSerializer
@@ -146,3 +207,14 @@ class CommentPostView(generics.CreateAPIView):
 
         Comment.objects.create(user=user, upload=post, text=content)
         return Response({'message': 'Comment added'}, status=status.HTTP_201_CREATED)
+
+
+class ReportPostView(generics.CreateAPIView):
+    serializer_class = ReportedPostSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'message': 'Report submitted successfully'}, status=status.HTTP_201_CREATED)

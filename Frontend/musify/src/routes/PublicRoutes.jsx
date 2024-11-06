@@ -14,6 +14,7 @@ import Settings from "../pages/User/Settings";
 import NotFound from "../components/Public/NotFound";
 import { Toaster } from "react-hot-toast";
 import { ProfileProvider } from "../context/ProfileContext";
+import UserErrorPage from "../components/Loader/UserErrorPage";
 
 
 
@@ -49,7 +50,10 @@ function PublicRoutes() {
                 <Route path="/explore" element={<Explore />} /> 
                 <Route path="/library" element={<Library />} /> 
                 <Route path="/settings" element={<Settings />} /> 
+                <Route path="/error" element={<UserErrorPage />} />
+
             </Route>
+
 
 
             {/* <Route element={<UserWrapper includeHeader={false} />}>

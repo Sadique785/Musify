@@ -1,13 +1,16 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useContext } from 'react';
 import { useSelector } from 'react-redux';
 import axiosInstance from '../../../../axios/authInterceptor';
 import ImageDisplay from './ImageDisplay';
 import VideoDisplay from './VideoDisplay';
 import AudioPost from './AudioPost'; // Import the AudioPost component
-import { FaUserCircle, FaHeart, FaRegHeart, FaShareAlt, FaEllipsisV, FaUserPlus,FaExclamationTriangle ,FaUserTimes, FaBan  } from 'react-icons/fa';
+import { FaUserCircle, FaHeart, FaRegHeart, FaShareAlt, FaEllipsisV, FaUserPlus,FaExclamationTriangle ,FaUserTimes, FaBan, FaTrashAlt   } from 'react-icons/fa';
 import { handleLikeToggle } from '../../../compUtils/likeUtils';
 import { handleCommentSubmit } from '../../../compUtils/commentUtils';
 import CommentSection from './CommentSection';
+import ReportModal from './ReportModal';
+import { ProfileContext } from '../../../../context/ProfileContext';
+import BlockConfirmationModal from './BlockConfirmationModal';
 
 function PostDetailModal({ post, onClose, setShouldRefresh, shouldRefresh }) {
   const [postDetails, setPostDetails] = useState(null);
@@ -23,25 +26,26 @@ function PostDetailModal({ post, onClose, setShouldRefresh, shouldRefresh }) {
   const gatewayUrl = import.meta.env.VITE_BACKEND_URL;
   const [isExpanded, setIsExpanded] = useState(false);
   const [isFollowed, setIsFollowed] = useState(false);
-  
-
+  const [showReportModal, setShowReportModal] = useState(false); 
   const currentUser= useSelector((state) => state.auth.user)
   const dropdownRef = useRef(null); 
+  const {profile} = useContext(ProfileContext)
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false); 
+  const isOwnUser = currentUser.username === post.user
+
+
 
 
   useEffect(() => {
     function handleClickOutside(event) {
-      // Only close the dropdown if clicked outside of the dropdown element
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownVisible(false); // Close dropdown
+        setDropdownVisible(false); 
       }
     }
   
-    // Attach the event listener on component mount
     document.addEventListener('mousedown', handleClickOutside);
-  
-    // Clean up the event listener on component unmount
-    return () => {
+      return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [dropdownRef]);
@@ -100,18 +104,23 @@ const handleLikeClick = () => {
 
   }
 
-  const handleBlockClick = ()=>{
-    console.log('Blocked');
-    
+  const handleBlockClick = () => {
+    setShowBlockModal(true);
   }
+
   const handleFollowClick  = ()=>{
     console.log('Followed');
     
   }
-  const handleReportClick   = ()=>{
-    console.log('Reported');
-    
-  }
+
+  const handleBlockConfirm = () => {
+    setIsBlocked(true);
+    setShouldRefresh(!shouldRefresh); 
+ };
+
+
+  const handleReportClick = () => setShowReportModal(true); 
+
 
 
   const handleCommentSubmitWrapper = (e) => {
@@ -219,37 +228,51 @@ const toggleDropdown = () => {
                   <span className="text-white ml-1">{postDetails.shares}</span>
                 </div>
                 </div>
+
+
                 <div className="relative overflow-visible">
-                  <FaEllipsisV onClick={toggleDropdown} className="text-gray-800 cursor-pointer" />
+      <FaEllipsisV onClick={toggleDropdown} className="text-gray-800 cursor-pointer" />
 
-                  {dropdownVisible && (
-                    <div ref={dropdownRef} className='absolute right-0 mt-2 bg-white border border-gray-300 rounded shadow-md z-20'>
-                      {/* Dropdown Content */}
-                      <div className='p-2 cursor-pointer text-blue-500 hover:bg-gray-200 flex justify-center items-center'
-                          onClick={handleFollowClick}>
-                        {isFollowed ? (
-                          <>
-                            <FaUserTimes className='inline mr-2 text-blue-500' /> Unfollow
-                          </>
-                        ) : (
-                          <>
-                            <FaUserPlus className='inline mr-2 text-blue-500' /> Follow
-                          </>
-                        )}
-                      </div>
-
-                      <div className='p-2 cursor-pointer text-red-500 hover:bg-gray-200 flex justify-center items-center'
-                          onClick={handleBlockClick}>
-                        <FaBan className='inline mr-2 text-red-500' /> Block
-                      </div>
-
-                      <div className='p-2 cursor-pointer text-red-500 hover:bg-gray-200 flex justify-center items-center'
-                          onClick={handleReportClick}>
-                        <FaExclamationTriangle className='inline mr-2 text-red-500' /> Report
-                      </div>
-                    </div>
-                  )}
-                </div>
+      {dropdownVisible && (
+        <div ref={dropdownRef} className="absolute right-0 mt-2 bg-white border border-gray-300 rounded shadow-md z-20 w-40">
+          {isOwnUser ? (
+            <>
+              {/* Options for own user's post */}
+              <div className="p-2 cursor-pointer text-blue-500 hover:bg-gray-200 flex items-center">
+                <FaShareAlt className="inline mr-2 text-blue-500" /> Share
+              </div>
+              <div className="p-2 cursor-pointer text-green-500 hover:bg-gray-200 flex items-center">
+                <FaUserCircle className="inline mr-2 text-green-500" /> Edit
+              </div>
+              <div className="p-2 cursor-pointer text-red-500 hover:bg-gray-200 flex items-center">
+                <FaTrashAlt className="inline mr-2 text-red-500" /> Delete
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Options for viewing someone else's post */}
+              <div className="p-2 cursor-pointer text-blue-500 hover:bg-gray-200 flex items-center" onClick={handleFollowClick}>
+                {isFollowed ? (
+                  <>
+                    <FaUserTimes className="inline mr-2 text-blue-500" /> Unfollow
+                  </>
+                ) : (
+                  <>
+                    <FaUserPlus className="inline mr-2 text-blue-500" /> Follow
+                  </>
+                )}
+              </div>
+              <div className="p-2 cursor-pointer text-red-500 hover:bg-gray-200 flex items-center" onClick={handleBlockClick}>
+                <FaBan className="inline mr-2 text-red-500" /> Block
+              </div>
+              <div className="p-2 cursor-pointer text-red-500 hover:bg-gray-200 flex items-center" onClick={handleReportClick}>
+                <FaExclamationTriangle className="inline mr-2 text-red-500" /> Report
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
 
               </div>
 
@@ -281,8 +304,21 @@ const toggleDropdown = () => {
               />
             </div>
           </div>
+
+          {showBlockModal && (
+                    <BlockConfirmationModal
+                        userId={postDetails.user_id}
+                        username={postDetails.user}
+                        isOpen={showBlockModal}
+                        onClose={() => setShowBlockModal(false)}
+                        shouldClose={onClose}
+                        onBlockConfirm={handleBlockConfirm}
+                    />
+                )}
         </div>
       </div>
+      {showReportModal && <ReportModal isOpen={showReportModal}  postId={post.id} onClose={() => setShowReportModal(false)} userEmail={profile.email}   />}
+
     </div>
   );
   

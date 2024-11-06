@@ -8,6 +8,7 @@ const ProfileProvider = ({ children }) => {
   const [profile, setProfile] = useState({
     username: '',
     imageUrl: '',
+    email:'',
   });
   
 
@@ -19,6 +20,7 @@ const ProfileProvider = ({ children }) => {
           setProfile({
             username: response.data.username,
             imageUrl: response.data.image_url,
+            email:response.data.email,
           });
         }
       } catch (error) {

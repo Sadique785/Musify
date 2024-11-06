@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
 from friends.models import FriendList, FriendRequest
+from authentication.models import CustomUser
 from django.db import models
 from django.utils import timezone
 from authentication.kafka_utils.producer import KafkaProducerService, FOLLOW_ACCEPTED,FOLLOW_CANCELLED,FOLLOW_REQUESTED,UNFOLLOW
@@ -133,3 +134,20 @@ class UnfollowUserView(APIView):
         return Response({"message": f"You have unfollowed {unfollowed_user.username}."}, status=status.HTTP_200_OK)
     
     
+
+class CheckBlockStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        username = request.query_params.get('username')
+        print('Got into blockstatus check', username)
+        
+        if not username:
+            return Response({"error": "Username is required."}, status=400)
+        
+        try:
+            profile_user = CustomUser.objects.get(username=username)
+            is_blocked = profile_user.blocked_users.filter(id=request.user.id).exists()
+            return Response({"isBlocked": is_blocked})
+        except CustomUser.DoesNotExist:
+            return Response({"isBlocked": False})

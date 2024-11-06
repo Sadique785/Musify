@@ -57,6 +57,12 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)  # This field determines admin access
     date_joined = models.DateTimeField(default=timezone.now)
     last_login = models.DateTimeField(null=True)
+    blocked_users = models.ManyToManyField(
+        'self',
+        symmetrical=False,
+        related_name='blocked_by',
+        blank=True
+    )
 
     objects = CustomUserManager()
 

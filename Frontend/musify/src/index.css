@@ -139,6 +139,9 @@ html {
   }
 }
 
+.no-scroll {
+  overflow: hidden;
+}
 
 /* Hide scrollbar for modern browsers */
 .no-scrollbar {

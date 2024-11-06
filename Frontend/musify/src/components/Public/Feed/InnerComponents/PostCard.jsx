@@ -181,7 +181,7 @@ function PostCard({ post, imageUrl, onPostClick, followStatus, updateFollowStatu
                 isDropdownOpen={isDropdownOpen}
                 dropdownRef={dropdownRef}
                 userId={user_id}
-                // followStatus={follow_status}
+                postId={id}
                 followStatus={followStatus}
                 isSameUser={is_same_user}
                 updateFollowStatus={updateFollowStatus}              

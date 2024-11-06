@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
-from .views import RegisterView, VerifyOtp, LoginView, LogoutView,TokenRefresherView, EditProfileView, FetchProfileView, ChangeProfileImageView, GoogleLoginView
+from .views import RegisterView, VerifyOtp, LoginView, LogoutView,TokenRefresherView, EditProfileView, FetchProfileView, ChangeProfileImageView, GoogleLoginView, BlockUserView
 
 
 
@@ -18,6 +18,7 @@ urlpatterns = [
     path('fetch-profile/<str:username>/', FetchProfileView.as_view(), name='fetch-profile-with-username'),
 
     path('change-profile-image/', ChangeProfileImageView.as_view(), name='change-profile-image'),
-     path('google-login/', GoogleLoginView.as_view(), name='google-login'),
+    path('google-login/', GoogleLoginView.as_view(), name='google-login'),
+    path('block-user/',BlockUserView.as_view(), name = 'block-user' ),
 
 ]

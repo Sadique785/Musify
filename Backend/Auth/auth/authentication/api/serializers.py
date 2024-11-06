@@ -177,18 +177,22 @@ class GenreSerializer(serializers.ModelSerializer):
 class ProfileViewSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username')  # Accessing the username from the related `user`
     user_id = serializers.IntegerField(source='user.id')
+    email = serializers.EmailField(source='user.email')
     image_url = serializers.SerializerMethodField()  
     talents = serializers.SerializerMethodField()
     genres = serializers.SerializerMethodField()
     following_count = serializers.SerializerMethodField()  
     followers_count = serializers.SerializerMethodField()  
     follow_status = serializers.SerializerMethodField()
+    is_blocked = serializers.SerializerMethodField()
+
 
     class Meta:
         model = Profile
         fields = [
             'username', 
             'user_id',
+            'email',
             'image_url', 
             'location', 
             'gender', 
@@ -198,7 +202,13 @@ class ProfileViewSerializer(serializers.ModelSerializer):
             'following_count',  
             'followers_count', 
             'follow_status',
+            'is_blocked',
         ]
+
+    def get_is_blocked(self, obj):
+        print(f'THis is the get_is_blocked function {self.context.get('is_blocked')}')
+        return self.context.get("is_blocked", False)
+    
     def get_image_url(self, obj):
         if obj.image:
             return f"{settings.MEDIA_URL}{obj.image}"
@@ -258,3 +268,45 @@ class ProfileViewSerializer(serializers.ModelSerializer):
             return 'unfollow'
         else:
             return 'follow'
+        
+    def to_representation(self, instance):
+        """
+        Customize representation to restrict data if the profile is blocked.
+        """
+        rep = super().to_representation(instance)
+        if self.context.get("is_blocked"):
+            return {
+                "username": rep["username"],
+                "user_id": rep["user_id"],
+                "image_url": rep["image_url"],
+                "is_blocked": True,
+            }
+        return rep
+
+
+class BlockUserSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+
+    def validate_user_id(self, value):
+        print(f"Validating user_id: {value}")
+        try:
+            user_to_block = CustomUser.objects.get(id=value)
+            print("User to block/unblock found:", user_to_block)
+        except CustomUser.DoesNotExist:
+            print("User to block/unblock does not exist")
+            raise serializers.ValidationError("User not found.")
+        return value
+
+    def save(self, current_user, action):
+        print("Updating block relationship based on action")
+        user_to_block = CustomUser.objects.get(id=self.validated_data['user_id'])
+        
+        if action == 'block':
+            current_user.blocked_users.add(user_to_block)
+            print(f"Blocked user {user_to_block} for {current_user}")
+        elif action == 'unblock':
+            current_user.blocked_users.remove(user_to_block)
+            print(f"Unblocked user {user_to_block} for {current_user}")
+        
+        current_user.save()
+        print("Blocked users updated in the database")

@@ -66,7 +66,6 @@ class KafkaConsumerService:
             sender = ContentUser.objects.get(id=sender_id)
             receiver = ContentUser.objects.get(id=receiver_id)
 
-            # Create or update the FriendRequest to set it as active
             follow_request, created = FriendRequest.objects.get_or_create(sender=sender, receiver=receiver)
             follow_request.is_active = True
             follow_request.save()
@@ -143,6 +142,33 @@ class KafkaConsumerService:
         except Exception as e:
             print(f'Error handling unfollow: {e}')
 
+    def handle_block_unblock(self, user_data):
+        """Handles adding or removing users from the blocked_users list based on the event type."""
+        try:
+            user_id = user_data.get('sender_id')
+            blocked_user_id = user_data.get('receiver_id')
+            event_type = user_data.get('event_type')
+            print(f'The content is here u{user_id}, b{blocked_user_id}, e{event_type}')
+            
+            user = ContentUser.objects.get(id=user_id)
+            blocked_user = ContentUser.objects.get(id=blocked_user_id)
+
+            print(f'Got the users:{user} is going to block {blocked_user}')
+
+            if event_type == 'block':
+                user.blocked_users.add(blocked_user)
+                print(f"{user.username} has blocked {blocked_user.username}.")
+            elif event_type == 'unblock':
+                user.blocked_users.remove(blocked_user)
+                print(f"{user.username} has unblocked {blocked_user.username}.")
+            
+            user.save()
+            
+        except ContentUser.DoesNotExist as e:
+            print(f"User not found: {e}")
+        except Exception as e:
+            print(f"Error handling block/unblock: {e}")
+
 
 
         
@@ -160,6 +186,8 @@ class KafkaConsumerService:
                 self.handle_follow_accept(user_data)
             elif event_type == 'unfollow':
                 self.handle_unfollow(user_data)
+            elif event_type == 'block' or event_type == 'unblock':
+                self.handle_block_unblock(user_data)
         except Exception as e:
             print(f'Error processing connection message: {e}')
 

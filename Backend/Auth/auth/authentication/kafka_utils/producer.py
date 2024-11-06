@@ -8,6 +8,7 @@ FOLLOW_REQUESTED = "follow_requested"
 FOLLOW_CANCELLED = "follow_cancelled"
 FOLLOW_ACCEPTED = "follow_accepted"
 UNFOLLOW = "unfollow"
+BLOCKED = "blocked"
 
 
 class KafkaProducerService:
@@ -74,3 +75,26 @@ class KafkaProducerService:
             
 
     
+    def send_block_event(self, sender_id, receiver_id, event_type):
+        """Send a block/unblock event to the 'connection' topic to notify other services."""
+        message = {
+            "event_type": event_type,  # This can be 'BLOCKED' or 'UNBLOCKED'
+            "sender_id": sender_id,
+            "receiver_id": receiver_id,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+        print("Preparing to send block/unblock event message:", message)
+
+        try:
+            self.producer.produce(
+                'connection',  
+                key=f"{sender_id}-{receiver_id}", 
+                value=json.dumps(message),
+                on_delivery=self.delivery_report  
+            )
+            self.producer.flush()
+            print(f"{event_type.capitalize()} message successfully sent to 'connection' topic")
+
+        except Exception as e:
+            print(f"Failed to send {event_type} event message: {e}")

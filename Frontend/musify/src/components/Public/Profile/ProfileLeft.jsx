@@ -1,7 +1,7 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useRef  } from 'react';
 import { useParams,useNavigate  } from 'react-router-dom';
 import {useSelector} from 'react-redux'
-import { FaEdit, FaGuitar,  FaComments, FaMicrophone, FaMusic, FaCamera, FaUser, FaTimes } from 'react-icons/fa';
+import { FaEdit, FaGuitar,  FaComments, FaMicrophone, FaMusic, FaCamera, FaUser, FaTimes, FaEllipsisH } from 'react-icons/fa';
 import axiosInstance from '../../../axios/authInterceptor';
 import { UserProfileContext } from '../../../context/UserProfileProvider';
 import { ProfileContext } from '../../../context/ProfileContext';
@@ -9,10 +9,11 @@ import toast from 'react-hot-toast';
 import talents from '../Elements/Talents'
 import genres from '../Elements/Genres'
 import ProfileFollowButton from './InnerComponents/ProfileFollowButton';
+import ProfileUnblockButton from './InnerComponents/ProfileUnblockButton';
 
 
 function ProfileLeft() {
-  const { userProfile, setUserProfile, loading } = useContext(UserProfileContext);
+  const { userProfile, setUserProfile, loading, isBlocked } = useContext(UserProfileContext);
   const { setProfile: setGlobalProfile } = useContext(ProfileContext)
   const loggedInUsername = useSelector((state) => state.auth.user?.username)
   const navigate = useNavigate();
@@ -21,22 +22,13 @@ function ProfileLeft() {
   const [isModalOpen, setIsModalOpen] = useState(false);  // Modal initially closed
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false); 
+  const dropdownRef = useRef(null);
 
   const isOwnProfile = loggedInUsername === username; 
 
 
-  useEffect( () => {
-    const fetchsomething = async ()=> {
-      const response = await axiosInstance.get('/friends/status/')
-      if (response.status == 200){
-        // toast.success('Everything went fineeeee')
-        console.log('everything fine');
-        
-      }
 
-    }
-    fetchsomething();
-  }, []);
 
 
 
@@ -98,11 +90,51 @@ function ProfileLeft() {
     }
   };
 
+  const handleUnblockCallback = () => {
+    setUserProfile((prevProfile) => ({
+      ...prevProfile,
+      isBlocked: false,  // Update local state
+    }));
+  };
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleBlock = async () => {
+    try {
+        await axiosInstance.post(`/auth/block-user/`, {
+            user_id: userProfile.userId, 
+            action: 'block'
+        });
+
+        setUserProfile((prevProfile) => ({
+            ...prevProfile,
+            isBlocked: true,
+        }));
+
+        setDropdownOpen(false);
+        window.location.reload();
+
+        // Show success toast
+        toast.success('User successfully blocked');
+    } catch (error) {
+        // Handle errors and show failure toast
+        toast.error('Error blocking user');
+        console.error('Error blocking user:', error);
+    }
+};
 
 
-  
-  console.log('User ID:', userProfile.userId);
-  console.log('Current follow status:', userProfile.followStatus);
+
 
   return (
     <div className="relative flex flex-col items-center p-6 pl-24 mt-[-190px] w-full">
@@ -132,33 +164,73 @@ function ProfileLeft() {
 
       </div>
   
-      {/* Username */}
-      {loading ? (
-        <div className="h-6 w-24 bg-gray-400 rounded animate-pulse mx-auto mt-4"></div>
-      ) : (
-        <h2 className="text-xl h-6 w-24 font-semibold text-center mt-4">
-          {userProfile.username}
-        </h2>
-      )}
-      {/* Conditional Buttons */}
+{/* Username */}
+{loading ? (
+  <div className="h-6 w-24 bg-gray-400 rounded animate-pulse mx-auto mt-4"></div>
+) : (
+  <div className="flex items-center justify-center mt-4 relative"> 
+    <h2 className="text-xl font-semibold text-center">{userProfile.username}</h2>
+    {!isBlocked && !isOwnProfile && (
+      <button
+        onClick={() => setDropdownOpen((prev) => !prev)}
+        className="ml-4 text-gray-500 hover:text-gray-700"  
+      >
+        <FaEllipsisH />
+      </button>
+    )}
 
-      {isOwnProfile ? (
+    {/* Dropdown Menu */}
+    {dropdownOpen && !isBlocked && (
+      <div
+        ref={dropdownRef}
+        className="absolute top-full mt-2 bg-white shadow-lg rounded-lg w-40 py-2 z-50"
+      >
         <button
-          onClick={handleEditProfile}
-          className="mt-4 bg-[#421b1b] flex items-center justify-center px-4 py-2 text-white rounded-lg hover:bg-[#5c2727]"
+          onClick={handleBlock}
+          className="w-full text-left px-4 py-2 text-red-500 hover:bg-gray-200 rounded-lg"
         >
-          <FaEdit className="mr-2" />
-          Edit Profile
+          Block
         </button>
-      ) : (
-        <div className="flex space-x-4 mt-4">
-          <button className="bg-gray-800 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
-            <FaComments />
-            <span>Chat</span>
-          </button>
-          <ProfileFollowButton userId={userProfile.userId} followStatus={userProfile.followStatus} loading={loading}/>
-        </div>
-      )}
+      </div>
+    )}
+  </div>
+)}
+
+
+
+
+
+
+{/* Conditional Buttons */}
+{isOwnProfile ? (
+  <button
+    onClick={handleEditProfile}
+    className="mt-4 bg-[#421b1b] flex items-center justify-center px-4 py-2 text-white rounded-lg hover:bg-[#5c2727]"
+  >
+    <FaEdit className="mr-2" />
+    Edit Profile
+  </button>
+) : (
+  <div className="flex space-x-4 mt-4">
+    {loading ? (
+      // Placeholder during loading
+      <div className="w-[200px] h-10 bg-gray-200 rounded-lg animate-pulse"></div>
+    ) : isBlocked ? (
+      // Unblock button if user is blocked
+      <ProfileUnblockButton userId={userProfile.userId} onUnblock={handleUnblockCallback} />
+    ) : (
+      // Chat and Follow buttons when not blocked
+      <>
+        <button className="bg-gray-800 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+          <FaComments />
+          <span>Chat</span>
+        </button>
+        <ProfileFollowButton userId={userProfile.userId} followStatus={userProfile.followStatus} loading={loading}/>
+      </>
+    )}
+  </div>
+)}
+
   
       {/* Modal for image selection */}
       {isModalOpen && (

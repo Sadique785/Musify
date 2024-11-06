@@ -1,15 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { FaEllipsisH } from 'react-icons/fa';
 import PostCardDropdown from './PostCardDropdown';
 import axiosInstance from '../../../../axios/authInterceptor';
 import toast from 'react-hot-toast';
-function FollowButton({ userId, followStatus, updateFollowStatus , isSameUser, showDropdown = true, setIsDropdownOpen, isDropdownOpen, dropdownRef }) {
+import ReportModal from './ReportModal';
+import { ProfileContext } from '../../../../context/ProfileContext';
+function FollowButton({ userId,postId, followStatus, updateFollowStatus , isSameUser, showDropdown = true, setIsDropdownOpen, isDropdownOpen, dropdownRef }) {
     const [followingStatus, setFollowingStatus] = useState(followStatus);
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+    const { profile } = useContext(ProfileContext);
     console.log(followStatus,'the status is this')
 
     useEffect(() => {
         setFollowingStatus(followStatus);
     }, [followStatus]);
+
     const handleFollowToggle = async () => {
         try {
             let response;
@@ -83,13 +88,15 @@ function FollowButton({ userId, followStatus, updateFollowStatus , isSameUser, s
                             onDelete={() => console.log('Delete action triggered')}
                             onEdit={() => console.log('Edit action triggered')}
                             onCopyLink={() => console.log('Copy Link action triggered')}
-                            onReport={() => console.log('Report action triggered')}
+                            onReport={() => setIsReportModalOpen(true)}
                             onSavePost={() => console.log('Save Post action triggered')}
                             onHidePost={() => console.log('Hide Post action triggered')}
                         />
                     )}
                 </div>
             )}
+            <ReportModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} userEmail={profile.email} postId={postId} />
+
         </div>
     );
 }

@@ -6,12 +6,12 @@ function PostCardDropdown({ dropdownRef, isSameUser, onDelete, onEdit, onCopyLin
             <ul>
                 {isSameUser ? (
                     <>
-                        <li 
+                        {/* <li 
                             className="px-2 py-1 hover:bg-gray-100 cursor-pointer"
                             onClick={onDelete}
                         >
                             Delete
-                        </li>
+                        </li> */}
                         <li 
                             className="px-2 py-1 hover:bg-gray-100 cursor-pointer"
                             onClick={onEdit}
@@ -41,12 +41,12 @@ function PostCardDropdown({ dropdownRef, isSameUser, onDelete, onEdit, onCopyLin
                         </li>
                     </>
                 )}
-                <li 
+                {/* <li 
                     className="px-2 py-1 hover:bg-gray-100 cursor-pointer"
                     onClick={onHidePost}
                 >
                     Hide Post
-                </li>
+                </li> */}
             </ul>
         </div>
     );

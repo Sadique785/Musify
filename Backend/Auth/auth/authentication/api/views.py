@@ -16,7 +16,7 @@ from authentication.api.services.send_otp import send_otp
 from django.views.decorators.csrf import ensure_csrf_cookie 
 from authentication.models import CustomUser, Profile, Talent, Genre
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
-from .serializers import UserRegisterSerializer, VerifyEmailSerializer, UserLoginSerializer, ProfileImageSerializer, ProfileSerializer, ProfileViewSerializer,  GoogleLoginSerializer
+from .serializers import UserRegisterSerializer, VerifyEmailSerializer, UserLoginSerializer, ProfileImageSerializer, ProfileSerializer, ProfileViewSerializer,  GoogleLoginSerializer, BlockUserSerializer
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from authentication.kafka_utils.producer import KafkaProducerService
@@ -427,9 +427,12 @@ class FetchProfileView(APIView):
             else:
                 user = request.user
 
+            is_blocked = user in request.user.blocked_users.all() or request.user in user.blocked_users.all()
+
+
             # Get the profile and serialize it
             profile = Profile.objects.get(user=user)
-            serializer = ProfileViewSerializer(profile, context = {"request": request})
+            serializer = ProfileViewSerializer(profile, context={"request": request, "is_blocked": is_blocked})
             print("Serialized image_url:", serializer.data.get('image_url'))  # Debugging line
 
 
@@ -521,3 +524,43 @@ class ChangeProfileImageView(APIView):
 
 
 
+
+class BlockUserView(APIView):
+    permission_classes = [IsAuthenticated]
+    kafka_producer = KafkaProducerService(settings.KAFKA_CONFIG)
+
+    def post(self, request):
+        print("Received POST request to block user")
+
+        action = request.data.get('action', 'block') 
+        serializer = BlockUserSerializer(data=request.data)
+
+        if serializer.is_valid():
+            print("Serializer data is valid")
+
+            if action == 'block':
+                serializer.save(current_user=request.user, action='block')
+                print("User blocked successfully in the database")
+                event_type = 'block'
+            elif action == 'unblock':
+                serializer.save(current_user=request.user, action='unblock')
+                print("User unblocked successfully in the database")                
+                event_type = 'unblock'
+            else:
+                return Response({"error": "Invalid action."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+            blocked_user_id = serializer.validated_data['user_id']
+            print(f"{request.user.id} blocked {blocked_user_id}")
+
+            self.kafka_producer.send_block_event(
+                event_type=event_type,
+                sender_id=request.user.id,
+                receiver_id=blocked_user_id
+            )
+            print("Block event sent to Kafka")
+            
+            return Response({"message": "User blocked successfully."}, status=status.HTTP_200_OK)
+        
+        print("Serializer validation failed:", serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
