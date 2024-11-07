@@ -22,6 +22,7 @@ function BlockConfirmationModal({ userId, username, isOpen, onClose, onBlockConf
         }
     };
 
+
     if (!isOpen) return null; 
 
     return (

@@ -8,6 +8,7 @@ from friends.models import FriendList, FriendRequest
 from authentication.models import CustomUser
 from django.db import models
 from django.utils import timezone
+from .serializers import UserSerializer
 from authentication.kafka_utils.producer import KafkaProducerService, FOLLOW_ACCEPTED,FOLLOW_CANCELLED,FOLLOW_REQUESTED,UNFOLLOW
 
 
@@ -151,3 +152,20 @@ class CheckBlockStatusView(APIView):
             return Response({"isBlocked": is_blocked})
         except CustomUser.DoesNotExist:
             return Response({"isBlocked": False})
+        
+
+
+class BlockedUsersView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        blocked_users = user.blocked_users.all()
+
+        if not blocked_users:
+
+            return Response({"message":"No blocked Users"}, status=status.HTTP_200_OK)
+        blocked_users_data = UserSerializer(blocked_users, many=True)
+
+        return Response({"blocked_users":blocked_users_data.data}, status=status.HTTP_200_OK)
