@@ -14,6 +14,7 @@ import Settings from "../pages/User/Settings";
 import NotFound from "../components/Public/NotFound";
 import { Toaster } from "react-hot-toast";
 import { ProfileProvider } from "../context/ProfileContext";
+import { LoadingProvider } from "../context/LoadingContext";
 import UserErrorPage from "../components/Loader/UserErrorPage";
 
 
@@ -37,11 +38,16 @@ function PublicRoutes() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
 
             
-            <Route element={<ResetWrapper> 
-                <ProfileProvider>
-                     <UserWrapper />
-                </ProfileProvider>
-                           </ResetWrapper>}
+            <Route
+                element={
+                    <ResetWrapper> 
+                        <ProfileProvider>
+                            <LoadingProvider>
+                                <UserWrapper />
+                            </LoadingProvider>
+                        </ProfileProvider>
+                    </ResetWrapper>
+                }
             >
                 <Route path="/feed" element={<Feed />} />
                 {/* <Route path="/profile" element={<Profile />} /> */}

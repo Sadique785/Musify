@@ -2,13 +2,12 @@ import React, { useContext } from "react";
 import { NavLink, Link } from "react-router-dom";
 import { FaPlus, FaHome, FaSearch, FaCompass, FaStar, FaBell, FaCommentDots, FaUser } from "react-icons/fa";
 import { ProfileContext } from "../../../context/ProfileContext";
-import { useSelector } from "react-redux";
+import { useLoading } from "../../../context/LoadingContext";
 
 function UserHeader() {
 
-
-
   const { profile } = useContext(ProfileContext);
+  const { isLoading } = useLoading();
   const username = profile.username
   const backendUrl = import.meta.env.VITE_BACKEND_URL
   console.log(profile.username); 
@@ -112,6 +111,14 @@ function UserHeader() {
             </Link>
           </div>
         </div>
+
+
+      {/* Loading bar */}
+      {isLoading && (
+        <div className="heading-loading-bar"></div>
+      )}
+
+
     </header>
   );
 }

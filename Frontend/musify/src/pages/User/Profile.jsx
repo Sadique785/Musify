@@ -9,15 +9,21 @@ import { ProfileProvider } from '../../context/ProfileContext';
 import { UserProfileProvider } from '../../context/UserProfileProvider';
 import axiosInstance from '../../axios/authInterceptor';
 import LoadingScreen from '../../components/Loader/LoadingScreen';
+import { useLoading } from '../../context/LoadingContext';
 
 function Profile() {
   const {username} = useParams();
   const [isBlocked, setIsBlocked] = useState(false); // State to store the block status
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate()
+  const { startLoading, stopLoading } = useLoading();
+  
 
 
   useEffect(() => {
+
+    startLoading();
+
     const checkBlockStatus = async () => {
       try {
         console.log('sendiing the block-check', username);
@@ -38,10 +44,19 @@ function Profile() {
     };
 
     checkBlockStatus();
-  }, [username]);
+    return () => stopLoading();
+  }, [username, navigate, startLoading, stopLoading]);
+
+  useEffect(() => {
+    if (loading) {
+      startLoading();
+    } else {
+      stopLoading();
+    }
+  }, [loading, startLoading, stopLoading]);
 
   if (loading) {
-    return <LoadingScreen/>// Show loading spinner or placeholder if needed
+    return <div>Loading..</div>// Show loading spinner or placeholder if needed
   }
 
   if (isBlocked) {
