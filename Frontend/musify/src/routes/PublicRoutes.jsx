@@ -16,6 +16,7 @@ import { Toaster } from "react-hot-toast";
 import { ProfileProvider } from "../context/ProfileContext";
 import { LoadingProvider } from "../context/LoadingContext";
 import UserErrorPage from "../components/Loader/UserErrorPage";
+import EditPage from "../pages/User/EditPage";
 
 
 
@@ -59,6 +60,21 @@ function PublicRoutes() {
                 <Route path="/error" element={<UserErrorPage />} />
 
             </Route>
+
+                {/* Editing page route without the header */}
+                <Route
+                    element={
+                        <ResetWrapper>
+                            <ProfileProvider>
+                                <LoadingProvider>
+                                    <UserWrapper includeHeader={false} />
+                                </LoadingProvider>
+                            </ProfileProvider>
+                        </ResetWrapper>
+                    }
+                >
+                    <Route path="/edit" element={<EditPage />} />
+                </Route>
 
 
 

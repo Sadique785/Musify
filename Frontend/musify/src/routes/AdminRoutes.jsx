@@ -3,7 +3,7 @@ import AdminWrapper from "../Wrappers/AdminWrapper";
 import AdminDashboard from "../pages/Admin/Protected/Dashboard";
 import AdminLogin from "../pages/Admin/AdminLogin";
 import UserManagement from "../pages/Admin/Protected/ManageUsers";
-import NotFound from "../components/Public/NotFound";
+import NotFound from "../components/Admin/InnerComponents/Notfound";
 import { Toaster } from 'react-hot-toast';
 import AdminDetail from "../pages/Admin/Protected/AdminDetail";
 import ManageContent from "../pages/Admin/Protected/ManageContent";

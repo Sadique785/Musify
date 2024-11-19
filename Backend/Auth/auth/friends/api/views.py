@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from friends.models import FriendList, FriendRequest
 from authentication.models import CustomUser
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 from .serializers import UserSerializer
 from authentication.kafka_utils.producer import KafkaProducerService, FOLLOW_ACCEPTED,FOLLOW_CANCELLED,FOLLOW_REQUESTED,UNFOLLOW
@@ -169,3 +170,32 @@ class BlockedUsersView(APIView):
         blocked_users_data = UserSerializer(blocked_users, many=True)
 
         return Response({"blocked_users":blocked_users_data.data}, status=status.HTTP_200_OK)
+    
+
+class UserSearchView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        search_query = request.query_params.get('q', '')
+        print('Seach for this guys' ,search_query)
+
+        blocked_by_users_ids = user.blocked_by.values_list('id', flat=True)
+
+        print('Here is the blocked guys',blocked_by_users_ids)
+
+        users = CustomUser.objects.filter(
+            Q(is_active=True) &  
+            ~Q(id__in=blocked_by_users_ids) & 
+            (Q(username__icontains=search_query) | Q(email__icontains=search_query)) 
+        ).distinct()[:6]  
+
+        print( 'search results users:' ,users)
+
+        users_data = UserSerializer(users, many=True)
+        print( 'sersa' ,users_data)
+
+        if users_data.data:
+            return Response({"results": users_data.data}, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "No users found"}, status=status.HTTP_200_OK)

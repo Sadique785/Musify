@@ -24,6 +24,9 @@ function MidFollowing() {
   const { imageUrl } = profile;
   const gatewayUrl = import.meta.env.VITE_BACKEND_URL
   const [followStatus, setFollowStatus] = useState({}); 
+  const [currentPage, setCurrentPage] = useState(1); // Start with page 1
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
 
 
@@ -51,39 +54,81 @@ function MidFollowing() {
     };
 
 
-
-  useEffect(() => {
-    const fetchTrendingPosts = async () => {
+    const fetchTrendingPosts = async (page, isInitial = false) => {
+      // here
       setLoading(true);
       setError(''); 
+      // here
+
+      setIsLoadingMore(true);
 
       try {
-        const response = await axiosInstance.get('/content/following-posts/');
+        const response = await axiosInstance.get(`/content/following-posts/?page=${page}`);
         console.log("Fetched posts:", response.data);
         if (response.data.results.length === 0) {
-          setError("No trending posts available at the moment.");
+          setHasMore(false);
+          if (isInitial) {
+            setError("No trending posts available at the moment.");
+          }
+          return;
+        } else {
+          setPosts(prevPosts => isInitial ? response.data.results : [...prevPosts, ...response.data.results]);
+          setHasMore(true);
         }
-
-        setPosts(response.data.results);
-        const initialFollowStatus = {};
-      response.data.results.forEach(post => {
-        initialFollowStatus[post.user_id] = post.follow_status; // assuming post contains `is_followed` field
-      });
-      setFollowStatus(initialFollowStatus);
-      console.log(initialFollowStatus);
-      
-
+  
+        
+        // Update follow status
+        const updatedFollowStatus = { ...followStatus };
+        response.data.results.forEach((post) => {
+          updatedFollowStatus[post.user_id] = post.follow_status;
+        });
+        setFollowStatus(updatedFollowStatus);
+  
       } catch (error) {
-        console.error('Error fetching trending posts:', error);
-        setError("Failed to load trending posts. Please try again later."); 
+        if (error.response && error.response.status === 404) {
+          setHasMore(false);
+        } else {
+          setError("Failed to load trending posts. Please try again later.");
+          console.error('Error fetching trending posts:', error);
+        }
       } finally {
         setLoading(false);
-        
+        setIsLoadingMore(false);
       }
     };
 
-    fetchTrendingPosts();
-  }, [shouldRefresh]);
+    useEffect(() => {
+      setLoading(true);
+      setError('');
+      setPosts([]);
+      setHasMore(true);
+      setCurrentPage(1);
+      fetchTrendingPosts(1, true);
+    }, [shouldRefresh]);
+
+
+    useEffect(() => {
+      const handleScroll = () => {
+        if (
+          window.innerHeight + document.documentElement.scrollTop + 100 >= 
+          document.documentElement.offsetHeight
+        ) {
+          if (hasMore && !isLoadingMore && !loading) {
+            setCurrentPage(prev => prev + 1);
+          }
+        }
+      };
+  
+      window.addEventListener("scroll", handleScroll);
+      return () => window.removeEventListener("scroll", handleScroll);
+    }, [hasMore, isLoadingMore, loading]);
+
+    useEffect(() => {
+      if (currentPage > 1) {
+        fetchTrendingPosts(currentPage);
+      }
+    }, [currentPage]);
+
 
   useEffect(() => {
     if (isPostModalOpen) {
@@ -108,10 +153,6 @@ function MidFollowing() {
     }));
 };
 
-
-  useEffect(() => {
-    console.log('Updated followStatus:', followStatus);
-}, [followStatus]);
 
 
     // Handle file change
@@ -250,116 +291,119 @@ function MidFollowing() {
     };
 
     const handleRetry = () => {
-      window.location.reload()
-    }
+      setError('');
+      setLoading(true);
+      setPosts([]);
+      setHasMore(true);
+      setCurrentPage(1);
+      fetchTrendingPosts(1, true);
+      // window.location.reload()
+
+    };
 
 
-
-  return (
-    
-<>
-    <div className='flex  flex-col bg-white z-10  items-start sticky top-[70px] p-6 pb-0  w-full '>
-      <h2 className='text-lg font-semibold mb-4'>Following Posts</h2>
-
-      {/* Upload Section */}
-      <div className='flex items-center w-full mb-6'>
-        <div className='w-10 h-10 bg-gray-300 rounded-full overflow-hidden flex items-center justify-center mr-4'>
-          {imageUrl ? (
-            <img
-            src={`${gatewayUrl}${imageUrl}`}
-            alt='Profile'
-              className='w-full h-full object-cover transition duration-300 ease-in-out'
-            />
-          ) : (
-            <FaUser className='text-gray-500 text-2xl' /> // Display user icon if no image
-          )}
-        </div>
-
-        <div className='flex-grow relative'>
-          <input
-            type='text'
-            className='w-full px-4 py-2 bg-gray-100 rounded-full placeholder-gray-600 focus:outline-none'
-            placeholder="What's new"
-            readOnly
-          />
-
-          <div className='absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2'>
-            <label htmlFor='file-upload'>
-              <FaUpload className='text-gray-600 h-4 w-4 cursor-pointer' />
-            </label>
-            <input
-              id='file-upload'
-              type='file'
-              accept='image/*,video/*,audio/*'
-              style={{ display: 'none' }}
-              onChange={handleFileChange}
-            />
-            <FaVideo className='text-gray-600 h-4 w-4 cursor-pointer' />
+    return (
+      <>
+        <div className='flex flex-col bg-white z-10 items-start sticky top-[70px] p-6 pb-0 w-full'>
+          <h2 className='text-lg font-semibold mb-4'>Following Posts</h2>
+          
+          {/* Upload Section */}
+          <div className='flex items-center w-full mb-6'>
+            <div className='w-10 h-10 bg-gray-300 rounded-full overflow-hidden flex items-center justify-center mr-4'>
+              {imageUrl ? (
+                <img
+                  src={`${gatewayUrl}${imageUrl}`}
+                  alt='Profile'
+                  className='w-full h-full object-cover transition duration-300 ease-in-out'
+                />
+              ) : (
+                <FaUser className='text-gray-500 text-2xl' />
+              )}
+            </div>
+  
+            <div className='flex-grow relative'>
+              <input
+                type='text'
+                className='w-full px-4 py-2 bg-gray-100 rounded-full placeholder-gray-600 focus:outline-none'
+                placeholder="What's new"
+                readOnly
+              />
+              <div className='absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2'>
+                <label htmlFor='file-upload'>
+                  <FaUpload className='text-gray-600 h-4 w-4 cursor-pointer' />
+                </label>
+                <input
+                  id='file-upload'
+                  type='file'
+                  accept='image/*,video/*,audio/*'
+                  style={{ display: 'none' }}
+                  onChange={handleFileChange}
+                />
+                <FaVideo className='text-gray-600 h-4 w-4 cursor-pointer' />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-
-
-
-{/* Error or Empty State Message */}
-{error ? (
-        <div className='flex flex-col items-center justify-center text-center mt-10'>
-          <FeedEmptyState
-            title="Oops!"
-            description={error}
-            onRetry={handleRetry}          />
-
-        </div>
-      ) : loading ? (
-        [...Array(2)].map((_, index) => <PostCardLoader key={index} />)
-      ) : posts.length === 0 ? (
-        <EmptyState
-          title="No Trending Posts Yet"
-          description="Check back later or try refreshing."
-        />
-      ) : (
-        <div className='grid grid-cols-1 gap-6'>
-          {posts.map((post) => (
-            <PostCard
-              key={post.id}
-              onPostClick={() => openPostDetailModal(post)}
-              post={post}
-              imageUrl={imageUrl}
-              userId={post.user_id}
-              followStatus={followStatus[post.user_id] || 'follow'}
-              updateFollowStatus={updateFollowStatus}
+  
+        {/* Content Section */}
+        {error ? (
+          <div className='flex flex-col items-center justify-center text-center mt-10'>
+            <FeedEmptyState
+              title="Oops!"
+              description={error}
+              onRetry={handleRetry}
             />
-          ))}
-        </div>
-      )}
-
-
+          </div>
+        ) : loading ? (
+          [...Array(2)].map((_, index) => <PostCardLoader key={index} />)
+        ) : posts.length === 0 ? (
+          <EmptyState
+            title="No Trending Posts Yet"
+            description="Check back later or try refreshing."
+          />
+        ) : (
+          <div className='grid grid-cols-1 gap-6'>
+            {posts.map((post) => (
+              <PostCard
+                key={`${post.id}-${post.timestamp}`}
+                onPostClick={() => openPostDetailModal(post)}
+                post={post}
+                imageUrl={imageUrl}
+                userId={post.user_id}
+                followStatus={followStatus[post.user_id] || 'follow'}
+                updateFollowStatus={updateFollowStatus}
+              />
+            ))}
+          </div>
+        )}
+  
+        {isLoadingMore && <LoadingSpinner />}
+        {!hasMore && posts.length > 0 && (
+          <div className="text-center py-4 text-gray-500">No more posts to load.</div>
+        )}
+  
+        {/* Modals */}
         {isPostModalOpen && (
-        <PostDetailModal
-          post={selectedPost}
-          onClose={closePostDetailModal}
-          setShouldRefresh={setShouldRefresh}
-          shouldRefresh={shouldRefresh}
+          <PostDetailModal
+            post={selectedPost}
+            onClose={closePostDetailModal}
+            setShouldRefresh={setShouldRefresh}
+            shouldRefresh={shouldRefresh}
+          />
+        )}
+  
+        <FilePreviewModal
+          file={file}
+          isModalOpen={isModalOpen}
+          handleCloseModal={() => setIsModalOpen(false)}
+          handleSaveFile={handleSaveFile}
+          isVerifying={isVerifying}
+          uploadProgress={uploadProgress}
+          description={description}
+          setDescription={setDescription}
         />
-      )}
-
-
-                  {/* File Preview Modal */}
-      <FilePreviewModal
-        file={file}
-        isModalOpen={isModalOpen}
-        handleCloseModal={() => setIsModalOpen(false)}
-        handleSaveFile={handleSaveFile}
-        isVerifying={isVerifying}
-        uploadProgress={uploadProgress}
-        description={description}
-        setDescription={setDescription}
-        
-      />
-
-</>
-  )
+      </>
+    );
 }
 
 export default MidFollowing;

@@ -158,3 +158,4 @@ class Relationship(models.Model):
 
     def __str__(self):
         return f"{self.sender.user.username} -> {self.receiver.user.username} ({self.status})"
+

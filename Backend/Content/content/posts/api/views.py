@@ -3,11 +3,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status, generics, permissions
-from .serializers import UploadSerializer, MediaSerializer, ContentSerializer, PostDetailSerializer, ReportedPostSerializer, LikeSerializer, CommentSerializer, ReportedPostSerializer
+from .serializers import UploadSerializer, MediaSerializer, ContentSerializer, PostDetailSerializer, ReportedPostViewSerializer, LikeSerializer, CommentSerializer, ReportedPostSerializer
 from posts.models import Upload, ReportedPost, Like, Comment, ContentUser
 from django.db.models import Count, Q
 from friends_content.models import FriendList, FriendRequest
 from django.shortcuts import get_object_or_404
+from rest_framework.pagination import PageNumberPagination
 
 
 
@@ -76,9 +77,16 @@ class UserUploadsListView(generics.ListAPIView):
     
 
 
+class TrendingContentPagination(PageNumberPagination):
+    page_size = 5
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 class TrendingContentView(generics.ListAPIView):
     serializer_class = ContentSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class  = TrendingContentPagination
 
     def get_queryset(self):
         user = self.request.user  # The current authenticated user
@@ -105,48 +113,48 @@ class TrendingContentView(generics.ListAPIView):
     def get_serializer_context(self):
         return {'request': self.request}
 
+class FollowingContentPagination(PageNumberPagination):
+    page_size = 5
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 
 class FollowingContentView(generics.ListAPIView):
     serializer_class = ContentSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = FollowingContentPagination
 
     def get_queryset(self):
-        user = self.request.user  # The current authenticated user
+        user = self.request.user
 
         try:
-            # Get the mutual friends of the user
             friend_list = FriendList.objects.get(user=user)
             mutual_friends = friend_list.friends.all()
-        except:
+        except FriendList.DoesNotExist:
             mutual_friends = FriendList.objects.none()
 
-        # Get the list of users the current user is following
         following_requests = FriendRequest.objects.filter(sender=user, is_active=True)
         following_users = [request.receiver for request in following_requests]
 
-        # Combine mutual friends and following users
         following_users_ids = set(mutual_friends.values_list('id', flat=True)) | set([user.id for user in following_users])
 
-        # Exclude blocked users (users who are blocked by the current user)
         blocked_users_ids = user.blocked_users.values_list('id', flat=True)
-
-        # Exclude users who have blocked the current user
         users_that_blocked_me_ids = ContentUser.objects.filter(blocked_users=user).values_list('id', flat=True)
 
-        # Get posts from users the current user is following, excluding blocked users and users who blocked the current user
         queryset = Upload.objects.filter(
             user_id__in=following_users_ids,
             is_active=True,
             is_private=False
         ).exclude(
-            user_id__in=blocked_users_ids  # Exclude posts from blocked users
+            user_id__in=blocked_users_ids
         ).exclude(
-            user_id__in=users_that_blocked_me_ids  # Exclude posts from users who blocked the current user
+            user_id__in=users_that_blocked_me_ids
         ).annotate(
             likes_count=Count('liked_by')
         ).order_by('-likes_count', '-created_at')
 
         return queryset
+
 
 
 
@@ -163,18 +171,23 @@ class PostDetailView(generics.RetrieveAPIView):
     
 
 class ReportedContentView(generics.ListAPIView):
-    serializer_class = ReportedPostSerializer
+    serializer_class = ReportedPostViewSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        print("ReportedContentView: Accessed get_queryset")  # Check if view is accessed
+
         queryset = ReportedPost.objects.all().order_by('-created_at')
+        print("Initial queryset:", queryset)  # Print the initial queryset to confirm data is fetched
 
         # Optionally, filter by is_reviewed if you want to display only unreviewed reports
         is_reviewed = self.request.query_params.get('is_reviewed')
         if is_reviewed is not None:
             queryset = queryset.filter(is_reviewed=is_reviewed.lower() in ['true', '1'])
+            print("Filtered queryset by is_reviewed:", queryset)  # Print filtered queryset if applicable
 
         return queryset
+
     
 
 
@@ -218,3 +231,40 @@ class ReportPostView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({'message': 'Report submitted successfully'}, status=status.HTTP_201_CREATED)
+
+class UpdateReviewStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        report_id = request.data.get('reportId')
+        new_status = request.data.get('newStatus')
+
+        try:
+            reported_post = ReportedPost.objects.get(id=report_id)
+            reported_post.is_reviewed = new_status
+
+            reported_post.save()
+            return Response({'message':'Review status updated successfully'}, status=status.HTTP_200_OK)
+        
+        except ReportedPost.DoesNotExist:
+            return Response({"error": "Reported post not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class PostBlockToggleView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        post_id = request.data.get('post_id')
+        new_status = request.data.get('new_status')
+        print("Received post_id:", post_id)  # Debugging line
+        print("Received new_status:", new_status)  # Debugging line
+        try:
+            post = Upload.objects.get(id=post_id)
+            post.is_active = new_status
+            post.save()
+            action = "blocked" if new_status is False else "unblocked"
+            return Response({'message': f'Post successfully {action}.'}, status=status.HTTP_200_OK)
+        except Upload.DoesNotExist:
+            return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)

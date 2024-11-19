@@ -12,10 +12,10 @@ function NotFound() {
         The page you're looking for doesn't exist or has been moved.
       </p>
       <button
-        onClick={() => navigate('/feed')}
+        onClick={() => navigate('/admin')}
         className="mt-8 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out"
       >
-        Go to Home Page
+        Go to Admin Dashboard
       </button>
     </div>
   );

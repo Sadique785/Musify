@@ -3,9 +3,14 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setSelectedSettings } from '../../../redux/auth/Slices/settingsSlice';
 import { FaUser, FaCog, FaUserFriends, FaBell, FaLock, FaSignOutAlt } from 'react-icons/fa';
 import { logout } from '../../../redux/auth/Slices/authSlice';
-import axiosInstance     from '../../../axios/axios';
+import axiosInstance from '../../../axios/axios';
 import {useNavigate} from 'react-router-dom'
 import { persistor } from '../../../redux/auth/userStore';
+import { resetTracks } from '../../../redux/auth/Slices/audioSlice';
+import { clearIndexedDB } from '../../../indexedDb/indexedDb';
+import { resetSelectedContent } from '../../../redux/auth/Slices/contentSlice';
+import { resetSelectedSettings } from '../../../redux/auth/Slices/settingsSlice';
+
 
 
 
@@ -20,33 +25,60 @@ function SettingsLeft() {
     };
 
     const handleLogout = async () => {
-        try{
-
-            const response = await axiosInstance.post('/auth/logout/');
-            if (response.status == 200) {
-                dispatch(logout);
-                console.log('logout successfull')
-
-                await persistor.purge();
-                console.log('persistor cleared');
-
-                navigate('/login')
-
-
-                
-            } else {
-                console.error('Logout failed', response.data);
-                
-            }
-
-        } catch(error){
-            console.error('An error occured during logout: ', error);
+        try {
+          const response = await axiosInstance.post('/auth/logout/');
+          if (response.status === 200) {
+            console.log('Logout successful');
             
-
+            // Dispatch the logout action
+            dispatch(logout());
+      
+            // Reset tracks
+            try {
+              dispatch(resetTracks());
+              console.log('Tracks Resetted');
+            } catch (err) {
+              console.error('Error resetting tracks: ', err);
+            }
+      
+            // Clear IndexedDB
+            try {
+              await clearIndexedDB();
+              console.log('IndexedDB cleared');
+            } catch (err) {
+              console.error('Error clearing IndexedDB: ', err);
+            }
+      
+            // Reset other states if necessary
+            try {
+              dispatch(resetSelectedContent());
+              dispatch(resetSelectedSettings());
+              console.log('Selected content and settings reset');
+            } catch (err) {
+              console.error('Error resetting selected content or settings: ', err);
+            }
+      
+            // Purge the persistor
+            try {
+              await persistor.purge();
+              console.log('Persistor cleared');
+            } catch (err) {
+              console.error('Error purging persistor: ', err);
+            }
+      
+            
+            // Navigate to the login page
+            navigate('/login');
+          } else {
+            console.error('Logout failed', response.data);
+          }
+        } catch (error) {
+          console.error('An error occurred during logout: ', error);
         }
-
+      
         console.log('Logout triggered');
-    };
+      };
+      
 
     const handleProfile = (e) => {
         

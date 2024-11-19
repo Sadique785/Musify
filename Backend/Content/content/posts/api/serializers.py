@@ -154,13 +154,27 @@ class ShareSerializer(serializers.ModelSerializer):
 
 
 
-class ReportedPostSerializer(serializers.ModelSerializer):
-    post_title = serializers.CharField(source='post.title', read_only=True) 
-    reported_by_username = serializers.CharField(source='reported_by.username', read_only=True)
+class ReportedPostViewSerializer(serializers.ModelSerializer):
+    report_id = serializers.IntegerField(source='id', read_only=True)
+    file_url = serializers.URLField(source='post.file_url', read_only=True)
+    post_id = serializers.IntegerField(source='post.id', read_only=True)
+    username = serializers.CharField(source='post.user.username', read_only=True)
+    reported_by = serializers.CharField(source='reported_by.username', read_only=True)
+    post_type = serializers.CharField(source='post.file_type', read_only=True)  
+    post_status = serializers.BooleanField(source='post.is_active', read_only=True)  # Ensuring it's read-only
 
     class Meta:
         model = ReportedPost
-        fields = ['id', 'post', 'post_title', 'reported_by', 'reported_by_username', 'report_reason', 'report_description', 'is_reviewed', 'created_at']
+        fields = [
+            'post_id', 'report_id', 'is_reviewed', 'username', 'post_type',
+            'file_url', 'report_reason', 'reported_by', 'report_description', 
+            'created_at', 'post_status'  # Add post_status here
+        ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        print("Serialized data:", data)  # Print serialized data to verify output structure
+        return data
 
 
 class ReportedPostSerializer(serializers.ModelSerializer):

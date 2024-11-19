@@ -7,6 +7,12 @@ import { useDispatch } from "react-redux";
 import axiosInstance from "../../../axios/authInterceptor";
 import { persistor } from "../../../redux/auth/userStore";
 import { logout } from "../../../redux/auth/Slices/authSlice";
+import { clearIndexedDB } from "../../../indexedDb/indexedDb";
+import { resetTracks } from "../../../redux/auth/Slices/audioSlice";
+import { resetSelectedContent } from "../../../redux/auth/Slices/contentSlice";
+import { resetSelectedSettings } from "../../../redux/auth/Slices/settingsSlice";
+import CreateDropdown from "../Feed/InnerComponents/CreateDropdown";
+import SearchBar from "./InnerComp.jsx/SearchBar";
 
 function UserHeader() {
   const { profile } = useContext(ProfileContext);
@@ -18,6 +24,8 @@ function UserHeader() {
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const [createDropdownOpen, setCreateDropdownOpen] = useState(false);
+
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -36,11 +44,41 @@ function UserHeader() {
     try {
       const response = await axiosInstance.post("/auth/logout/");
       if (response.status === 200) {
-        dispatch(logout());
         console.log("Logout successful");
-        await persistor.purge();
-        console.log("Persistor cleared");
+        
+        dispatch(logout());
+  
+        try {
+          dispatch(resetTracks());
+          console.log("Tracks Resetted");
+        } catch (err) {
+          console.error("Error resetting tracks: ", err);
+        }
+  
+        try {
+          await clearIndexedDB();
+          console.log("IndexedDB cleared");
+        } catch (err) {
+          console.error("Error clearing IndexedDB: ", err);
+        }
+  
+        try {
+          dispatch(resetSelectedContent());
+          dispatch(resetSelectedSettings());
+          console.log("Selected content and settings reset");
+        } catch (err) {
+          console.error("Error resetting selected content or settings: ", err);
+        }
+  
+        try {
+          await persistor.purge();
+          console.log("Persistor cleared");
+        } catch (err) {
+          console.error("Error purging persistor: ", err);
+        }
+  
         navigate("/login");
+        window.location.reload()
       } else {
         console.error("Logout failed", response.data);
       }
@@ -48,6 +86,7 @@ function UserHeader() {
       console.error("An error occurred during logout: ", error);
     }
   };
+  
 
   const handleLogout = async () => {
     setLogoutLoading(true);
@@ -55,6 +94,14 @@ function UserHeader() {
     setLogoutLoading(false);
     setDropdownOpen(false);
   };
+
+
+  const handleUserSelect = (user) => {
+    navigate(`/profile/${user.username}`);
+  };
+
+  const toggleCreateDropdown = () => setCreateDropdownOpen(!createDropdownOpen);
+
 
   return (
     <header className="bg-white fixed w-full transition duration-200 p-2 z-50 shadow-md">
@@ -108,15 +155,9 @@ function UserHeader() {
             </NavLink>
           </ul>
 
-          {/* Search Bar */}
-          <div className="relative w-96 flex ml-24 items-center">
-            <FaSearch className="absolute ml-2 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search"
-              className="pl-8 pr-4 py-1 rounded-full border border-gray-300 w-[650px] focus:outline-none focus:ring focus:border-blue-300"
-            />
-          </div>
+          <div className="ml-24 relative">
+          <SearchBar onUserSelect={handleUserSelect} />
+        </div>
         </div>
 
         {/* Notification, Chat, Profile Dropdown */}
@@ -203,8 +244,12 @@ function UserHeader() {
           </div>
 
           {/* Create Button */}
-          <Link to="/create">
-            <button className="flex items-center space-x-2 bg-black text-white font-semibold px-4 py-[8px] rounded-full transition duration-200 hover:bg-gray-800">
+          <Link >
+            <button className="flex items-center space-x-2 bg-black text-white font-semibold px-4 py-[8px] rounded-full transition duration-200 hover:bg-gray-800"
+            onClick={(e) => {
+              e.preventDefault();
+              toggleCreateDropdown();
+            }}>
               <FaPlus className="text-sm" />
               <span className="text-sm font-bold">Create</span>
             </button>
@@ -214,6 +259,8 @@ function UserHeader() {
 
       {/* Loading bar */}
       {isLoading && <div className="heading-loading-bar"></div>}
+      <CreateDropdown isOpen={createDropdownOpen} onClose={() => setCreateDropdownOpen(false)} />
+
     </header>
   );
 }

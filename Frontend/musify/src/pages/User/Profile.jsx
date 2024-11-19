@@ -12,7 +12,7 @@ import LoadingScreen from '../../components/Loader/LoadingScreen';
 import { useLoading } from '../../context/LoadingContext';
 
 function Profile() {
-  const {username} = useParams();
+  const { username } = useParams();
   const [isBlocked, setIsBlocked] = useState(false); // State to store the block status
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate()
@@ -33,11 +33,10 @@ function Profile() {
         });
         if (response.data.isBlocked) {
           setIsBlocked(true);
-          navigate('/error'); // Redirect to an error page if blocked
+          navigate('/error'); 
         }
       } catch (error) {
         console.error("Error checking block status:", error);
-        // You can also handle errors here (e.g., network issues)
       } finally {
         setLoading(false);
       }
@@ -56,7 +55,7 @@ function Profile() {
   }, [loading, startLoading, stopLoading]);
 
   if (loading) {
-    return <div>Loading..</div>// Show loading spinner or placeholder if needed
+    return <div>Loading..</div>
   }
 
   if (isBlocked) {

@@ -26,11 +26,9 @@ const UserProfileProvider = ({ children, username }) => {
         if (response.status === 200) {
           console.log('Data from Provider', response.data);
 
-          // Check if the user is blocked and set the state accordingly
           const blocked = response.data.is_blocked || false;
           setIsBlocked(blocked);
 
-          // If not blocked, set all profile details; else, limit data
           setUserProfile({
             username: response.data.username,
             userId: response.data.user_id,

@@ -4,7 +4,10 @@ import storage from 'redux-persist/lib/storage';
 import { combineReducers } from 'redux';
 import authReducer from './Slices/authSlice'; 
 import contentReducer from './Slices/contentSlice'; 
-import settingsReducer from './Slices/settingsSlice'; // Import the corrected settings reducer
+import settingsReducer from './Slices/settingsSlice'; 
+import audioReducer from './Slices/audioSlice';
+
+
 
 const persistConfig = {
   key: 'root',
@@ -14,7 +17,8 @@ const persistConfig = {
 const rootReducer = combineReducers({
   auth: authReducer,
   content: contentReducer,
-  settings: settingsReducer, // Add the settings reducer
+  settings: settingsReducer,
+  audio: audioReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
