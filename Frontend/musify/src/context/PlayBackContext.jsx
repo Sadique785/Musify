@@ -1,4 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
+import { saveTrackSettings, getAllTrackSettings } from '../indexedDb/indexedDb';
+
 
 const PlaybackContext = createContext();
 
@@ -11,12 +13,49 @@ export const PlaybackProvider = ({ children }) => {
   const [trackPositions, setTrackPositions] = useState({});
   const [startTimes, setStartTimes] = useState({});
   const [isDragging, setIsDragging] = useState(false);
+  const [trackVolumes, setTrackVolumes] = useState({});
 
   const playbackSpeed = 1; // Keep the actual playback speed at 1
   
   const startTimeRef = useRef(null);
   const animationFrameRef = useRef(null);
   const lastTimeRef = useRef(currentTime);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const allSettings = await getAllTrackSettings();
+        const volumes = {};
+        allSettings.forEach(settings => {
+          if (settings) {
+            volumes[settings.trackId] = settings.volume ?? 50; // Default to 50 if not set
+          }
+        });
+        setTrackVolumes(volumes);
+      } catch (error) {
+        console.error('Error loading track settings:', error);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
+  const updateTrackVolume = async (trackId, volume) => {
+    setTrackVolumes(prev => ({
+      ...prev,
+      [trackId]: volume
+    }));
+
+    try {
+      await saveTrackSettings(trackId, {
+        trackId,
+        volume,
+        lastModified: Date.now()
+      });
+    } catch (error) {
+      console.error('Error saving track volume:', error);
+    }
+  };
 
   const updateStartTimes = (positions) => {
     const calculatedStartTimes = Object.entries(positions).reduce((acc, [trackId, position]) => {
@@ -101,9 +140,9 @@ export const PlaybackProvider = ({ children }) => {
         setTrackPositions,
         startTimes,
         setStartTimes: updateStartTimes,
-        isDragging,
-        setIsDragging,
+        isDragging, setIsDragging,
         playbackSpeed,
+        trackVolumes, updateTrackVolume,
       }}
     >
       {children}

@@ -1,4 +1,3 @@
-// DraggableTrack.js
 import React, { useState, useRef, useEffect } from 'react';
 import { usePlayback } from '../../../../context/PlayBackContext';
 import WaveformTrack from './WaveformTrack';
@@ -7,9 +6,14 @@ const DraggableTrack = ({
   trackId, 
   audioData, 
   trackWidth, 
+  segment,
   color, 
   name,
-  onPositionChange 
+  isCutting, // Add the isCutting prop
+  onPositionChange ,
+  demoData,
+  setDemoData,
+  handleClick,
 }) => {
   const [position, setPosition] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -25,11 +29,22 @@ const DraggableTrack = ({
   } = usePlayback();
 
   const handleMouseDown = (e) => {
-    if (isPlaying) return;
+    if (isPlaying || isCutting) return; // Prevent dragging if isCutting is true
     setIsDragging(true);
     setContextIsDragging(true);
     setStartX(e.clientX);
     setStartPos(position);
+  };
+
+
+  const onTrackClick = (e) => {
+    if (!trackRef.current) return;
+
+    const trackRect = trackRef.current.getBoundingClientRect();
+
+    const clickX = e.clientX - trackRect.left;
+
+    handleClick(trackId, clickX, trackWidth);
   };
 
   const handleMouseMove = (e) => {
@@ -82,18 +97,19 @@ const DraggableTrack = ({
 
   return (
     <div
-      ref={trackRef}
-      className={`relative group transition-all duration-200 cursor-move ${
-        isDragging ? 'opacity-75' : ''
-      }`}
-      style={{
-        transform: `translateX(${position}px)`,
-        width: `${trackWidth}px`,
-        height: '96px',
-        userSelect: 'none'
-      }}
-      onMouseDown={handleMouseDown}
-    >
+  ref={trackRef}
+  onClick={onTrackClick}
+  className={`relative group transition-all duration-200 ${isCutting ? 'cursor-crosshair' : 'cursor-move'} ${
+    isDragging ? 'opacity-75' : ''
+  }`}
+  style={{
+    transform: `translateX(${position}px)`,
+    width: `${trackWidth}px`,
+    height: '96px',
+    userSelect: 'none',
+  }}
+  onMouseDown={handleMouseDown}
+>
       <div className="h-24 rounded-lg relative">
         <div
           style={{
@@ -114,6 +130,9 @@ const DraggableTrack = ({
             color={color} 
             position={position} 
             trackId={trackId} 
+            demoData={demoData}
+            setDemoData={setDemoData}
+            isCutting={isCutting}
           />
           <div className="absolute left-4 top-4 text-sm text-gray-300">{name}</div>
         </div>

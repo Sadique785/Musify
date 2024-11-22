@@ -10,56 +10,53 @@ const RightHeader = forwardRef(({ zoomLevel, onScroll }, ref) => {
   const [animationStartTime, setAnimationStartTime] = useState(null);
   const visualPositionRef = useRef(0);
 
-  useEffect(() => {
-    if (isPlaying) {
-      setAnimationStartTime(Date.now() - (currentTime * 1000));
-      visualPositionRef.current = currentTime * pixelsPerSecond * zoomLevel;
-      
-      const animate = () => {
-        const targetPosition = currentTime * pixelsPerSecond * zoomLevel;
-        
-        // Smooth interpolation for visual position
-        visualPositionRef.current += (targetPosition - visualPositionRef.current) * 0.1;
-        
-        if (progressIndicatorRef.current) {
-          progressIndicatorRef.current.style.transform = `translateX(${visualPositionRef.current}px)`;
-        }
-        if (playedAreaRef.current) {
-          playedAreaRef.current.style.width = `${visualPositionRef.current}px`;
-        }
-        
-        requestAnimationFrame(animate);
-      };
-      
-      const animation = requestAnimationFrame(animate);
-      return () => cancelAnimationFrame(animation);
-    } else {
-      // When paused, smoothly move to exact position
-      const position = currentTime * pixelsPerSecond * zoomLevel;
-      if (progressIndicatorRef.current) {
-        progressIndicatorRef.current.style.transform = `translateX(${position}px)`;
-      }
-      if (playedAreaRef.current) {
-        playedAreaRef.current.style.width = `${position}px`;
-      }
-      visualPositionRef.current = position;
-    }
-  }, [isPlaying, currentTime, zoomLevel]);
+
+
+
+useEffect(() => {
+  const position = currentTime * pixelsPerSecond * zoomLevel;
+  
+  // Update visual position ref
+  visualPositionRef.current = position;
+
+  // Update progress indicator and played area
+  if (progressIndicatorRef.current) {
+    progressIndicatorRef.current.style.transform = `translateX(${position}px)`;
+  }
+  if (playedAreaRef.current) {
+    playedAreaRef.current.style.width = `${position}px`;
+  }
+}, [currentTime, zoomLevel]);
+
+
 
   const handleTimelineClick = (e) => {
     if (!progressBarRef.current) return;
-
+  
     const rect = progressBarRef.current.getBoundingClientRect();
     const clickX = e.clientX - rect.left + progressBarRef.current.scrollLeft;
     const newTime = clickX / (pixelsPerSecond * zoomLevel);
-    
+  
     if (newTime >= 0 && newTime <= 300) {
+      // Calculate exact position based on time
+      const exactPosition = newTime * pixelsPerSecond * zoomLevel;
+  
+      // Update context time
       setCurrentTime(newTime);
-      if (isPlaying) {
-        setAnimationStartTime(Date.now() - (newTime * 1000));
+      
+      // Directly update refs with exact position
+      if (progressIndicatorRef.current) {
+        progressIndicatorRef.current.style.transform = `translateX(${exactPosition}px)`;
       }
+      if (playedAreaRef.current) {
+        playedAreaRef.current.style.width = `${exactPosition}px`;
+      }
+      
+      // Ensure visual position ref is updated
+      visualPositionRef.current = exactPosition;
     }
   };
+  
 
   const generateTimeMarkers = () => {
     const markers = [];
@@ -95,7 +92,7 @@ const RightHeader = forwardRef(({ zoomLevel, onScroll }, ref) => {
     <div 
       ref={ref}
       className="w-full overflow-x-scroll scrollbar-hidden relative"
-      onScroll={onScroll}
+      onScroll={(e) => onScroll(e)}
     >
       <div 
         ref={progressBarRef}

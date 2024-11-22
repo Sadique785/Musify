@@ -9,8 +9,9 @@ function PlayItems() {
   const formatTime = (time) => {
     const hours = String(Math.floor(time / 3600)).padStart(2, '0');
     const minutes = String(Math.floor((time % 3600) / 60)).padStart(2, '0');
-    const seconds = String(time % 60).padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
+    const seconds = String(Math.floor(time % 60)).padStart(2,'0');
+    const milliseconds = (time % 1).toFixed(2).slice(2);
+    return `${hours}:${minutes}:${seconds}.${milliseconds}`;
   };
 
   return (

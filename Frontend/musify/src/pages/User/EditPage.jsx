@@ -11,16 +11,16 @@ function EditPage() {
   const rightPanelRef = useRef(null);
   const [isScrolling, setIsScrolling] = useState(false);
 
-  // Improved scroll synchronization
+
   const syncScroll = (sourceRef, targetRef) => {
     if (!sourceRef?.current || !targetRef?.current || isScrolling) return;
     
     setIsScrolling(true);
     targetRef.current.scrollTop = sourceRef.current.scrollTop;
-    
-    // Reset the scrolling flag after a short delay
-    setTimeout(() => setIsScrolling(false), 50);
+        setTimeout(() => setIsScrolling(false), 50);
   };
+
+
 
   useEffect(() => {
     const preventDefault = (e) => {
@@ -41,6 +41,17 @@ function EditPage() {
       document.removeEventListener('wheel', preventDefault);
     };
   }, []);
+
+  useEffect (() => {
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  })
 
   return (
     <PlaybackProvider>

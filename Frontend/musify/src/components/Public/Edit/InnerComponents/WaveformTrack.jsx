@@ -3,14 +3,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { usePlayback } from '../../../../context/PlayBackContext';
 
-function WaveformTrack({ file_url, color, trackId }) {
+function WaveformTrack({ file_url, color, trackId, demoData, setDemoData, isCutting }) {
   const waveformRef = useRef(null);
   const wavesurferRef = useRef(null);
-  const { isPlaying, currentTime, startTimes, isDragging } = usePlayback();
+  const { isPlaying, currentTime, startTimes, isDragging, trackVolumes } = usePlayback();
   const [duration, setDuration] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const [isTrackCompleted, setIsTrackCompleted] = useState(false);
   const lastTimeRef = useRef(currentTime);
+
+  const trackVolume = (trackVolumes[trackId] ?? 50) / 100;
+
 
   useEffect(() => {
     if (!wavesurferRef.current) {
@@ -21,28 +24,62 @@ function WaveformTrack({ file_url, color, trackId }) {
         barWidth: 2,
         height: 80,
         normalize: true,
+        interact: false,
       });
+      console.log('WaveSurfer instance created');
       wavesurferRef.current.load(file_url);
-
+  
       wavesurferRef.current.on('ready', () => {
         setDuration(wavesurferRef.current.getDuration());
         setIsReady(true);
       });
-
+  
       wavesurferRef.current.on('finish', () => {
         setIsTrackCompleted(true);
         wavesurferRef.current.pause();
         wavesurferRef.current.seekTo(1);
       });
-    }
 
+      wavesurferRef.current.on('interaction', () => {
+        const clickTime = wavesurferRef.current.getCurrentTime();
+        console.log('Clicked time:', clickTime, trackId);
+        
+        // Update demoData with the clicked time
+        setDemoData(prevData => ({
+          ...prevData, 
+          id:trackId,
+          cutTime: clickTime
+        }));
+      });
+
+
+      
+    } else {
+      console.log('WaveSurfer instance already exists');
+      wavesurferRef.current.load(file_url); // Reload only if file_url changes
+    }
+  
     return () => {
+      console.log('Cleaning up WaveSurfer');
+      // Only destroy if absolutely necessary
       if (wavesurferRef.current) {
         wavesurferRef.current.destroy();
         wavesurferRef.current = null;
       }
     };
   }, [file_url, color]);
+  
+
+  useEffect(() => {
+    if (wavesurferRef.current) {
+      wavesurferRef.current.setVolume(trackVolume);
+    }
+  }, [trackVolume]);
+
+
+
+  
+  
 
   useEffect(() => {
     if (!wavesurferRef.current || !isReady || isDragging) return;
@@ -65,6 +102,7 @@ function WaveformTrack({ file_url, color, trackId }) {
         setIsTrackCompleted(true);
       }
     }
+
 
     // Handle playback
     if (isPlaying && !isTrackCompleted) {

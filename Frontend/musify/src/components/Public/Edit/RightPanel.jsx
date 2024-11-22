@@ -3,26 +3,20 @@ import RightHeader from './InnerComponents/RightHeader';
 import RightContent from './InnerComponents/RightContent';
 import { usePlayback } from '../../../context/PlayBackContext';
 
-function RightPanel( ) {
-  const { isPlaying, playAll, pauseAll, resetAll, currentTime, disablePlayButton } = usePlayback();
+function RightPanel() {
+  const { currentTime } = usePlayback();
   const [zoomLevel, setZoomLevel] = useState(1);
-  const headerRef = useRef(null);
-  const contentRef = useRef(null);
-  const [isScrolling, setIsScrolling] = useState(false);
+  const headerScrollRef = useRef(null);
+  const contentScrollRef = useRef(null);
 
-  const handleScroll = (source) => {
-    if (isScrolling) return;
-    
-    setIsScrolling(true);
-    const scrollLeft = source.scrollLeft;
-    
-    if (source === headerRef.current && contentRef.current) {
-      contentRef.current.scrollLeft = scrollLeft;
-    } else if (source === contentRef.current && headerRef.current) {
-      headerRef.current.scrollLeft = scrollLeft;
+  const handleScroll = (e) => {
+    const source = e.target;
+    const isHeader = source === headerScrollRef.current;
+    const target = isHeader ? contentScrollRef.current : headerScrollRef.current;
+
+    if (target) {
+      target.scrollLeft = source.scrollLeft;
     }
-    
-    setTimeout(() => setIsScrolling(false), 50);
   };
 
   const handleZoom = (e) => {
@@ -46,33 +40,25 @@ function RightPanel( ) {
 
   return (
     <div 
-      className="bg-[#060505] h-full  flex flex-col"
+      className="bg-[#060505] h-full flex flex-col"
       onWheel={handleZoom}
-      onKeyDown={(e) => {
-        if (e.ctrlKey || e.metaKey) {
-          e.preventDefault();
-        }
-      }}
     >
-
-
       <div className="sticky top-0 pl-6 z-40 bg-[#060505]">
         <RightHeader 
           zoomLevel={zoomLevel}
-          onScroll={(e) => handleScroll(e.target)}
-          ref={headerRef}
+          onScroll={handleScroll}
+          ref={headerScrollRef}
         />
       </div>
-      <div className="flex-1 mt-6  overflow-y-scroll scrollbar-hidden">
+      <div className="flex-1 mt-6 overflow-y-scroll scrollbar-hidden">
         <RightContent 
           zoomLevel={zoomLevel}
-          onScroll={(e) => handleScroll(e.target)}
-          ref={contentRef}
+          onScroll={handleScroll}
+          ref={contentScrollRef}
         />
       </div>
     </div>
   );
 }
-
 
 export default RightPanel;
