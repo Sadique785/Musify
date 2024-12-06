@@ -16,6 +16,7 @@ venv/
 gateenv/
 ENV/
 .venv/
+cnctenv/
 env/
 
 # IDE and editor files

@@ -1,27 +1,52 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Mic, MoreHorizontal, Volume2 } from 'lucide-react';
 import { usePlayback } from '../../../../context/PlayBackContext';
+import TrackDropdown from './TrackDropdown';
+import { useDispatch } from 'react-redux';
+import { removeTrack } from '../../../../redux/auth/Slices/audioSlice';
 
 const TrackItem = ({ track }) => {
+  const dispatch = useDispatch();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
   const { trackVolumes, updateTrackVolume } = usePlayback();
-  
-  // Get current volume or default to 50%
   const currentVolume = trackVolumes[track.id] ?? 50;
 
   const handleVolumeChange = (e) => {
     const volume = parseFloat(e.target.value);
     updateTrackVolume(track.id, volume);
   };
+  const handleDeleteTrack = () => {
+    dispatch(removeTrack(track.id));
+  };
 
-  const onClick = () => {
-    console.log('Clicked');
-  }
+  const toggleDropdown = () => setDropdownOpen((prev) => !prev);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Check if click is outside the dropdown
+      if (
+        dropdownOpen &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target)
+      ) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [dropdownOpen]);
 
   return (
-    <div className="flex items-center group">
+    <div className="flex items-center group relative">
       {/* Left Mic Section */}
-      <div className="relative h-24 w-5 bg-zinc-800/50 flex  justify-center">
-        <Mic size={16} style={{ color: track.color }} className="opacity-60 group-hover:opacity-100 transition-opacity mt-4 duration-200" />
+      <div className="relative h-24 w-5 bg-zinc-800/50 flex justify-center">
+        <Mic
+          size={16}
+          style={{ color: track.color }}
+          className="opacity-60 group-hover:opacity-100 transition-opacity mt-4 duration-200"
+        />
       </div>
 
       {/* Main Content Section */}
@@ -37,7 +62,11 @@ const TrackItem = ({ track }) => {
                 {track.fileName ? track.fileName : track.name}
               </span>
             </div>
-            <button onClick={onClick} className="mr-2 text-zinc-400 hover:text-white opacity-0 group-hover:opacity-100 transition-all duration-200">
+            {/* Dropdown Button */}
+            <button
+              onClick={toggleDropdown}
+              className="mr-2 text-zinc-400 hover:text-white opacity-0 group-hover:opacity-100 transition-all duration-200"
+            >
               <MoreHorizontal size={20} />
             </button>
           </div>
@@ -46,12 +75,9 @@ const TrackItem = ({ track }) => {
         {/* Lower Section */}
         <div className="h-12 bg-[#282c32] bg-opacity-50 group-hover:bg-opacity-20 transition-all duration-200 px-4">
           <div className="flex items-center h-full space-x-4">
-            {/* FX Button */}
             <button className="px-3 py-1 rounded-full bg-zinc-700/50 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs font-medium transition-all duration-200">
               FX
             </button>
-            
-            {/* Volume Control */}
             <div className="flex items-center flex-1 space-x-2">
               <Volume2 size={16} className="text-zinc-500" />
               <input
@@ -60,7 +86,7 @@ const TrackItem = ({ track }) => {
                 max="100"
                 value={currentVolume}
                 onChange={handleVolumeChange}
-                className="flex-1 h-1 bg-zinc-700/50 rounded-full appearance-none cursor-pointer
+                className="flex-1 h-1 bg-zinc-700/50 rounded-full appearance-none cursor-pointer 
                   [&::-webkit-slider-thumb]:appearance-none 
                   [&::-webkit-slider-thumb]:h-4 
                   [&::-webkit-slider-thumb]:w-4 
@@ -75,10 +101,21 @@ const TrackItem = ({ track }) => {
       </div>
 
       {/* Right Color Indicator */}
-      <div 
+      <div
         style={{ backgroundColor: track.color }}
         className="h-24 w-1 opacity-70"
       />
+
+      {/* Dropdown */}
+      {dropdownOpen && (
+        <TrackDropdown
+          ref={dropdownRef}
+          trackId={track.id}
+          onRename={() => console.log('Rename clicked')}
+          onDelete={handleDeleteTrack}
+          onChangeColor={() => console.log('Change color clicked')}
+        />
+      )}
     </div>
   );
 };

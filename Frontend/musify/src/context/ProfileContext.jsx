@@ -6,6 +6,7 @@ const ProfileContext = createContext();
 
 const ProfileProvider = ({ children }) => {
   const [profile, setProfile] = useState({
+    userId:null,
     username: '',
     imageUrl: '',
     email:'',
@@ -18,6 +19,7 @@ const ProfileProvider = ({ children }) => {
         const response = await axiosInstance.get('/auth/fetch-profile/');
         if (response.status === 200) {
           setProfile({
+            userId: response.data.user_id,
             username: response.data.username,
             imageUrl: response.data.image_url,
             email:response.data.email,

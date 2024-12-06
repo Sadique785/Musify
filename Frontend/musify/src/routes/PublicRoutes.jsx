@@ -17,8 +17,9 @@ import { ProfileProvider } from "../context/ProfileContext";
 import { LoadingProvider } from "../context/LoadingContext";
 import UserErrorPage from "../components/Loader/UserErrorPage";
 import EditPage from "../pages/User/EditPage";
-
-
+import NetworkError from "../components/Public/NetworkError";
+import ChatPage from "../pages/User/ChatPage";
+import NotificationProvider from "../components/Public/navbars/InnerComp.jsx/Notification/NotificationManager";
 
 
 
@@ -28,8 +29,10 @@ function PublicRoutes() {
     
     return (
 
-        <>
+        <NotificationProvider>
+
         <Toaster />
+        {/* <NetworkError /> */}
         
         <Routes>
             <Route path="/" element={<Home />} />
@@ -58,6 +61,8 @@ function PublicRoutes() {
                 <Route path="/library" element={<Library />} /> 
                 <Route path="/settings" element={<Settings />} /> 
                 <Route path="/error" element={<UserErrorPage />} />
+                <Route path="/chat" element={<ChatPage />} />
+
 
             </Route>
 
@@ -87,7 +92,7 @@ function PublicRoutes() {
 
 
         </Routes>
-                </>
+        </NotificationProvider>
     );
 }
 

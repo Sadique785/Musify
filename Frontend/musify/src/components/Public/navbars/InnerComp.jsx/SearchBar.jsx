@@ -92,51 +92,58 @@ function SearchBar({ onUserSelect }) {
         />
       )}
 
-      {/* Dropdown container with animated height */}
-      <div
-        className={`absolute left-0 top-14 w-full bg-white shadow-lg border rounded-lg overflow-hidden transition-all duration-300 ease-in-out ${
-          loading || results.length > 0 ? "max-h-96" : "max-h-0"
-        }`}
-        style={{ zIndex: 999 }}
-      >
-        {/* Display loading shimmer if loading */}
-        {loading && <ShimmerLoading />}
+{(loading || (results.length > 0 && isOpen)) && (
+  <div
+    className={`absolute left-0 top-14 w-full bg-white shadow-lg border rounded-lg overflow-hidden transition-all duration-300 ease-in-out ${
+      loading || results.length > 0 ? "max-h-96" : "max-h-0"
+    }`}
+    style={{ zIndex: 999 }}
+  >
+    {/* Display loading shimmer if loading */}
+    {loading && <ShimmerLoading />}
 
-        {/* Display results if there are any and not loading */}
-        {results.length > 0 && !loading && isOpen && (
-          <div className="max-h-96 10 overflow-y-auto">
-            {results.map((user) => (
-              <div
-                key={user.id}
-                className="p-2 hover:bg-gray-100 cursor-pointer flex items-center space-x-4"
-                onClick={() => onUserSelect(user)}
-              >
-                {/* User Image */}
-                <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
-                  {user.image ? (
-                    <img
-                      src={user.image}
-                      alt={user.username}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <FaUserCircle className="text-gray-500 w-8 h-8" />
-                  )}
-                </div>
-                {/* Username */}
-                <span className="text-gray-800 font-medium">{user.username}</span>
-              </div>
-            ))}
+    {/* Display results if there are any and not loading */}
+    {results.length > 0 && !loading && isOpen && (
+      <div className="max-h-96 10 overflow-y-auto">
+        {results.map((user) => (
+          <div
+            key={user.id}
+            className="p-2 hover:bg-gray-100 cursor-pointer flex items-center space-x-4"
+            onClick={() => {
+              onUserSelect(user);
+              setIsOpen(false);
+            }}
+          >
+            {/* User Image */}
+            <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
+              {user.image ? (
+                <img
+                  src={user.image}
+                  alt={user.username}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <FaUserCircle className="text-gray-500 w-8 h-8" />
+              )}
+            </div>
+            {/* Username */}
+            <span className="text-gray-800 font-medium">{user.username}</span>
           </div>
-        )}
-
-        {/* Show 'No users found' if no results, not loading, dropdown open, and a search has been conducted */}
-        {results.length === 0 && searchTerm.trim() !== "" && !loading && isOpen && hasSearched && (
-          <div className="p-4">
-            <span className="text-gray-500">No users found</span>
-          </div>
-        )}
+        ))}
       </div>
+    )}
+
+    {/* Show 'No users found' if no results, not loading, dropdown open, and a search has been conducted */}
+    {results.length === 0 && searchTerm.trim() !== "" && !loading && isOpen && hasSearched && (
+      <div className="p-4">
+        <span className="text-gray-500">No users found</span>
+      </div>
+    )}
+  </div>
+)}
+
+
+
     </div>
   );
 }

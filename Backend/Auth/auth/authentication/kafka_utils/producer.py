@@ -9,6 +9,8 @@ FOLLOW_CANCELLED = "follow_cancelled"
 FOLLOW_ACCEPTED = "follow_accepted"
 UNFOLLOW = "unfollow"
 BLOCKED = "blocked"
+LIKED = 'liked'
+COMMENTED = 'commented'
 
 
 class KafkaProducerService:
@@ -98,3 +100,40 @@ class KafkaProducerService:
 
         except Exception as e:
             print(f"Failed to send {event_type} event message: {e}")
+
+
+    def send_follow_notification(self, event_type, sender_id, receiver_id):
+        """
+        Send follow-related notifications to the notification topic.
+        
+        Args:
+            event_type (str): Type of follow event (request/accept/cancel/unfollow)
+            sender_id (int): ID of the user initiating the action
+            receiver_id (int): ID of the user receiving the notification
+        """
+        notification_message = {
+            "event_type": event_type,
+            "sender_id": sender_id,
+            "receiver_id": receiver_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "read": False,
+            "notification_category": "follow"  # This helps in frontend filtering/categorization
+        }
+
+        print(f"Preparing to send follow notification: {notification_message}")
+
+        try:
+            self.producer.produce(
+                'notification',  # New dedicated notification topic
+                key=str(receiver_id),  # Using receiver_id as key for partitioning
+                value=json.dumps(notification_message),
+                on_delivery=self.delivery_report
+            )
+            
+            self.producer.flush()
+            print(f"Follow notification successfully sent to notification topic")
+
+        except Exception as e:
+            print(f"Failed to send follow notification: {e}")
+
+

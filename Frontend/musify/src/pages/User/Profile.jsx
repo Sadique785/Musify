@@ -10,6 +10,8 @@ import { UserProfileProvider } from '../../context/UserProfileProvider';
 import axiosInstance from '../../axios/authInterceptor';
 import LoadingScreen from '../../components/Loader/LoadingScreen';
 import { useLoading } from '../../context/LoadingContext';
+import { PostModalProvider } from '../../context/PostModalContext';
+
 
 function Profile() {
   const { username } = useParams();
@@ -68,20 +70,21 @@ function Profile() {
 
 
   return (
+    <PostModalProvider>
+      <UserProfileProvider username={username} >
 
-    <UserProfileProvider username={username} >
+            <div className='flex flex-col'>
+              <ProfileCover />
+            <div className='flex' >
 
-    <div className='flex flex-col'>
-      <ProfileCover />
-    <div className='flex' >
-
-    <LeftSection  />
-    <MiddleSection  />
-    <RightSection />
-    </div>
-      
-    </div>
-    </UserProfileProvider>
+            <LeftSection  />
+            <MiddleSection  />
+            <RightSection />
+            </div>
+              
+            </div>
+      </UserProfileProvider>
+    </PostModalProvider>
   );
 }
 

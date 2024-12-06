@@ -1,4 +1,5 @@
 import React, {useState, useEffect, useContext} from 'react'
+import { useSelector, useDispatch } from 'react-redux';
 import axiosInstance from '../../../../axios/authInterceptor';
 import PostCard from '../InnerComponents/PostCard';
 import LoadingSpinner from '../../Profile/InnerComponents/LoadingSpinner';
@@ -11,22 +12,44 @@ import axios from 'axios';
 import PostDetailModal from '../InnerComponents/PostDetailModal';
 import PostCardLoader from '../../../../pages/Admin/Loaders/PostCardLoader';
 import FeedEmptyState from '../../Profile/InnerComponents/FeedEmptyState';
+import {
+  setTrendingPosts,
+  setHasMore,
+  setCurrentPage,
+  setLoading,
+  setError,
+  updateFollowStatusInStore,
+  clearFeedData,
+  setPaginationLoading,
+} from '../../../../redux/auth/Slices/feedPostsSlice';
+
+
 
 
 
 function MidTrending() {
+  const dispatch = useDispatch();
+  const {
+    trendingPosts: posts,
+    hasMore,
+    currentPage,
+    isLoading: loading,
+    error,
+    lastFetchTime,
+    isPaginationLoading
+  } = useSelector((state) => state.feedPosts);
 
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(''); // New error state
+  // const [posts, setPosts] = useState([]);
+  // const [loading, setLoading] = useState(true);
+  // const [error, setError] = useState(''); // New error state
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const { profile } = useContext(ProfileContext);
   const [shouldRefresh, setShouldRefresh] = useState(false)
   const { imageUrl } = profile;
   const gatewayUrl = import.meta.env.VITE_BACKEND_URL
   const [followStatus, setFollowStatus] = useState({}); 
-  const [currentPage, setCurrentPage] = useState(1); // Start with page 1
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  // const [currentPage, setCurrentPage] = useState(1); // Start with page 1
+  // const [hasMore, setHasMore] = useState(true);
 
 
 
@@ -51,21 +74,33 @@ function MidTrending() {
       setSelectedPost(null);
       setIsPostModalOpen(false);
     };
+    
+
+
+
 
     const fetchTrendingPosts = async (page, isInitial = false) => {
       try {
-        setIsLoadingMore(true);
+        if (isInitial) {
+          dispatch(setLoading(true));
+        } else {
+          dispatch(setPaginationLoading(true));
+        }
+    
         const response = await axiosInstance.get(`/content/trending/?page=${page}`);
         
         if (response.data.results.length === 0) {
-          setHasMore(false);
+          dispatch(setHasMore(false));
           if (isInitial) {
-            setError("No trending posts available at the moment.");
+            dispatch(setError("No trending posts available at the moment."));
           }
           return;
         }
-  
-        setPosts(prevPosts => isInitial ? response.data.results : [...prevPosts, ...response.data.results]);
+    
+        dispatch(setTrendingPosts({ 
+          posts: response.data.results, 
+          isInitial 
+        }));
         
         // Update follow status
         const updatedFollowStatus = { ...followStatus };
@@ -73,51 +108,88 @@ function MidTrending() {
           updatedFollowStatus[post.user_id] = post.follow_status;
         });
         setFollowStatus(updatedFollowStatus);
-  
       } catch (error) {
         if (error.response && error.response.status === 404) {
-          setHasMore(false);
+          dispatch(setHasMore(false));
         } else {
-          setError("Failed to load trending posts. Please try again later.");
+          dispatch(setError("Failed to load trending posts. Please try again later."));
           console.error('Error fetching trending posts:', error);
         }
       } finally {
-        setLoading(false);
+        if (isInitial) {
+          dispatch(setLoading(false));
+        } else {
+          dispatch(setPaginationLoading(false));
+        }
         setIsLoadingMore(false);
       }
     };
 
     useEffect(() => {
-      setLoading(true);
-      setError('');
-      setPosts([]);
-      setHasMore(true);
-      setCurrentPage(1);
-      fetchTrendingPosts(1, true);
+      const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+      
+      if (
+        posts.length === 0 || 
+        !lastFetchTime || 
+        Date.now() - lastFetchTime > CACHE_DURATION ||
+        shouldRefresh
+      ) {
+        // Fetch new data if cache is empty, expired, or refresh is needed
+        dispatch(setLoading(true));
+        dispatch(setError(''));
+        dispatch(setHasMore(true));
+        dispatch(setCurrentPage(1));
+        fetchTrendingPosts(1, true);
+      }
     }, [shouldRefresh]);
 
-  
+
+    
+
     useEffect(() => {
+      let timeoutId;
+      
       const handleScroll = () => {
-        if (
-          window.innerHeight + document.documentElement.scrollTop + 100 >= 
-          document.documentElement.offsetHeight
-        ) {
-          if (hasMore && !isLoadingMore && !loading) {
-            setCurrentPage(prev => prev + 1);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+  
+        timeoutId = setTimeout(() => {
+          if (
+            window.innerHeight + document.documentElement.scrollTop + 100 >= 
+            document.documentElement.offsetHeight
+          ) {
+            if (hasMore && !isLoadingMore && !loading && !isPaginationLoading) {
+              setIsLoadingMore(true);
+              const nextPage = currentPage + 1;
+              dispatch(setCurrentPage(nextPage));
+            }
           }
+        }, 200);
+      };
+      
+      window.addEventListener("scroll", handleScroll);
+      return () => {
+        window.removeEventListener("scroll", handleScroll);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
         }
       };
+    }, [hasMore, isLoadingMore, loading, currentPage, isPaginationLoading]);
   
-      window.addEventListener("scroll", handleScroll);
-      return () => window.removeEventListener("scroll", handleScroll);
-    }, [hasMore, isLoadingMore, loading]);
-
+    useEffect(() => {
+      if (currentPage > 1) {
+        fetchTrendingPosts(currentPage, false);
+      }
+    }, [currentPage]);
 
 
     useEffect(() => {
       if (currentPage > 1) {
-        fetchTrendingPosts(currentPage);
+        fetchTrendingPosts(currentPage)
+          .finally(() => {
+            setIsLoadingMore(false); // Reset loading flag after fetch completes
+          });
       }
     }, [currentPage]);
 
@@ -137,11 +209,19 @@ function MidTrending() {
   }, [isPostModalOpen]);
   
 
-  const updateFollowStatus = (userId, status) => {
-    setFollowStatus(prevStatus => ({
-        ...prevStatus,
-        [userId]: status,
-    }));
+//   const updateFollowStatus = (userId, status) => {
+//     setFollowStatus(prevStatus => ({
+//         ...prevStatus,
+//         [userId]: status,
+//     }));
+// };
+
+const updateFollowStatus = (userId, status) => {
+  setFollowStatus(prevStatus => ({
+    ...prevStatus,
+    [userId]: status,
+  }));
+  dispatch(updateFollowStatusInStore({ userId, status }));
 };
 
 
@@ -281,15 +361,10 @@ function MidTrending() {
     };
 
 
-    const handleRetry = () => {
-      setError('');
-      setLoading(true);
-      setPosts([]);
-      setHasMore(true);
-      setCurrentPage(1);
-      fetchTrendingPosts(1, true);
-      // window.location.reload()
 
+    const handleRetry = () => {
+      dispatch(clearFeedData());
+      setShouldRefresh(prev => !prev);
     };
 
 
@@ -339,40 +414,40 @@ function MidTrending() {
   
         {/* Content Section */}
         {error ? (
-          <div className='flex flex-col items-center justify-center text-center mt-10'>
-            <FeedEmptyState
-              title="Oops!"
-              description={error}
-              onRetry={handleRetry}
-            />
-          </div>
-        ) : loading ? (
-          [...Array(2)].map((_, index) => <PostCardLoader key={index} />)
-        ) : posts.length === 0 ? (
-          <EmptyState
-            title="No Trending Posts Yet"
-            description="Check back later or try refreshing."
-          />
-        ) : (
-          <div className='grid grid-cols-1 gap-6'>
-            {posts.map((post) => (
-              <PostCard
-                key={`${post.id}-${post.timestamp}`}
-                onPostClick={() => openPostDetailModal(post)}
-                post={post}
-                imageUrl={imageUrl}
-                userId={post.user_id}
-                followStatus={followStatus[post.user_id] || 'follow'}
-                updateFollowStatus={updateFollowStatus}
-              />
-            ))}
-          </div>
-        )}
-  
-        {isLoadingMore && <LoadingSpinner />}
-        {!hasMore && posts.length > 0 && (
-          <div className="text-center py-4 text-gray-500">No more posts to load.</div>
-        )}
+  <div className='flex flex-col items-center justify-center text-center mt-10'>
+    <FeedEmptyState
+      title="Oops!"
+      description={error}
+      onRetry={handleRetry}
+    />
+  </div>
+) : loading ? ( // Only show loading shimmer for initial load
+  [...Array(2)].map((_, index) => <PostCardLoader key={index} />)
+) : posts.length === 0 ? (
+  <EmptyState
+    title="No Trending Posts Yet"
+    description="Check back later or try refreshing."
+  />
+) : (
+  <div className='grid grid-cols-1 gap-6'>
+    {posts.map((post) => (
+      <PostCard
+        key={`${post.id}-${post.timestamp}`}
+        onPostClick={() => openPostDetailModal(post)}
+        post={post}
+        imageUrl={imageUrl}
+        userId={post.user_id}
+        followStatus={followStatus[post.user_id] || 'follow'}
+        updateFollowStatus={updateFollowStatus}
+      />
+    ))}
+    {isPaginationLoading && <LoadingSpinner />} {/* Show spinner only during pagination */}
+  </div>
+)}
+
+{!hasMore && posts.length > 0 && (
+  <div className="text-center py-4 text-gray-500">No more posts to load.</div>
+)}
   
         {/* Modals */}
         {isPostModalOpen && (

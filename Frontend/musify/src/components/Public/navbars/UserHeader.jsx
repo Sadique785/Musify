@@ -13,6 +13,9 @@ import { resetSelectedContent } from "../../../redux/auth/Slices/contentSlice";
 import { resetSelectedSettings } from "../../../redux/auth/Slices/settingsSlice";
 import CreateDropdown from "../Feed/InnerComponents/CreateDropdown";
 import SearchBar from "./InnerComp.jsx/SearchBar";
+import NotificationComponent from "./InnerComp.jsx/Notification/NotificationComponent";
+import { PostModalProvider } from "../../../context/PostModalContext";
+
 
 function UserHeader() {
   const { profile } = useContext(ProfileContext);
@@ -25,6 +28,8 @@ function UserHeader() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const [createDropdownOpen, setCreateDropdownOpen] = useState(false);
+
+  const [notificationOpen, setNotificationOpen] = useState(false);
 
 
   useEffect(() => {
@@ -86,6 +91,14 @@ function UserHeader() {
       console.error("An error occurred during logout: ", error);
     }
   };
+
+  const toggleNotifications = () => {
+    setNotificationOpen(!notificationOpen);
+  };
+
+  const handleChatNavigate = () =>{
+    navigate('/chat');
+  }
   
 
   const handleLogout = async () => {
@@ -162,8 +175,13 @@ function UserHeader() {
 
         {/* Notification, Chat, Profile Dropdown */}
         <div className="flex items-center space-x-9">
-          <FaBell className="text-gray-700 hover:text-black cursor-pointer text-xl" />
-          <FaCommentDots className="text-gray-700 hover:text-black cursor-pointer text-xl" />
+          <FaBell 
+          className="text-gray-700 hover:text-black cursor-pointer text-xl" 
+          onClick={toggleNotifications}
+          />
+          <FaCommentDots className="text-gray-700 hover:text-black cursor-pointer text-xl" 
+          onClick={handleChatNavigate}
+          />
 
           {/* Profile Dropdown */}
           <div className="relative" ref={dropdownRef}>
@@ -256,6 +274,14 @@ function UserHeader() {
           </Link>
         </div>
       </div>
+
+            <PostModalProvider>
+            <NotificationComponent 
+        userId={profile.userId} 
+        isOpen={notificationOpen} 
+        onClose={() => setNotificationOpen(false)} 
+      />
+            </PostModalProvider>
 
       {/* Loading bar */}
       {isLoading && <div className="heading-loading-bar"></div>}

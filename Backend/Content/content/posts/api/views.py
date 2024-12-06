@@ -9,7 +9,7 @@ from django.db.models import Count, Q
 from friends_content.models import FriendList, FriendRequest
 from django.shortcuts import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
-
+from ..kafka_utils.producer import KafkaProducerService, LIKED, COMMENTED
 
 
 
@@ -199,12 +199,22 @@ class LikePostView(generics.CreateAPIView):
         user = request.user
         post_id = kwargs.get('post_id')
         post = Upload.objects.get(id=post_id)
+        kafka_producer = KafkaProducerService()
 
         if post.liked_by.filter(id=user.id).exists():
             post.liked_by.remove(user)
             return Response({'message': 'Post unliked'}, status=status.HTTP_200_OK)
         else:
             post.liked_by.add(user)
+            # Send Kafka notification when post is liked
+            kafka_producer.send_post_activity_notification(
+                event_type=LIKED,
+                sender_id=user.id,
+                receiver_id=post.user.id,  # post owner's ID
+                post_id=post_id
+            )
+            print('Produced for Liked')
+
             return Response({'message': 'Post liked'}, status=status.HTTP_201_CREATED)
 
 
@@ -218,7 +228,18 @@ class CommentPostView(generics.CreateAPIView):
         post = Upload.objects.get(id=post_id)
         content = request.data.get('content')
 
-        Comment.objects.create(user=user, upload=post, text=content)
+        comment = Comment.objects.create(user=user, upload=post, text=content)
+        kafka_producer = KafkaProducerService()
+        kafka_producer.send_post_activity_notification(
+            event_type=COMMENTED,
+            sender_id=user.id,
+            receiver_id=post.user.id,  # post owner's ID
+            post_id=post_id,
+            comment_id=comment.id
+        )
+        print('Produced for comment', comment)
+
+
         return Response({'message': 'Comment added'}, status=status.HTTP_201_CREATED)
 
 

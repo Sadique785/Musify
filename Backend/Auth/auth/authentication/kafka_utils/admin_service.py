@@ -25,7 +25,7 @@ class KafkaAdminService:
 
     def initialize_topics(self):
         """Initialize required topics for the application."""
-        topics = ["user-creation", "user-update", 'connection']
+        topics = ["user-creation", "user-update", 'connection', 'notification']
         for topic in topics:
             self.create_topic(topic)
 

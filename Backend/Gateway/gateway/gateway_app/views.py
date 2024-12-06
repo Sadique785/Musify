@@ -315,7 +315,91 @@ class ContentMicroservice(APIView):
             return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
         
 
-
+class ConnectionMicroserviceView(APIView):
+    session = httpx.Client()
+    
+    def get(self, request, path):
+        print('GET request received for communication service')
+        
+        try:
+            print('request header from communication', request.headers, request.GET)
+            headers = dict(request.headers)
+            if 'Content-Length' in headers:
+                del headers['Content-Length']
+            
+            content_service_url = os.getenv('CONNECTION_SERVICE_URL')
+            forward_url = f'{content_service_url}/{path}'
+            
+            with httpx.Client() as client:
+                response = client.get(forward_url, headers=headers, params=request.GET)
+            
+            return Response(response.json(), status=response.status_code)
+            
+        except httpx.RequestError as e:
+            print(f'Request failed: {e}')
+            return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+    
+    def post(self, request, path):
+        print('POST request received for communication service')
+        
+        try:
+            content_service_url = os.getenv('CONNECTION_SERVICE_URL')
+            forward_url = f'{content_service_url}/{path}'
+            headers = dict(request.headers)
+            
+            if 'Content-Length' in headers:
+                del headers['Content-Length']
+            
+            response = self.session.post(forward_url, headers=headers, json=request.data)
+            
+            set_cookie_header = response.headers.get('set-cookie')
+            print('Header details here:', response.headers)
+            
+            response_data = response.json()
+            status_code = response.status_code
+            
+            django_response = Response(response_data, status=status_code)
+            
+            if set_cookie_header:
+                cookie_value = set_cookie_header.split(';')[0]
+                cookie_name, cookie_value = cookie_value.split('=')
+                django_response.set_cookie(
+                    key=cookie_name,
+                    value=cookie_value,
+                    max_age=31449600,  # One year
+                    path='/',
+                    samesite='Lax',
+                )
+            
+            return django_response
+            
+        except httpx.RequestError as e:
+            return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+    
+    def put(self, request, path):
+        print('PUT request received for communication service')
+        
+        try:
+            content_service_url = os.getenv('CONNECTION_SERVICE_URL')
+            forward_url = f'{content_service_url}/{path}'
+            headers = dict(request.headers)
+            
+            if 'Content-Length' in headers:
+                del headers['Content-Length']
+            
+            if 'video' in request.FILES:
+                files = {'video': request.FILES['video']}
+                response = self.session.put(forward_url, headers=headers, files=files)
+            else:
+                response = self.session.put(forward_url, headers=headers, json=request.data)
+            
+            print('Headers after receiving response:', response.headers)
+            
+            return Response(response.json(), status=response.status_code)
+            
+        except httpx.RequestError as e:
+            return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+        
 
 class UnifiedService(APIView):
     session = httpx.Client()

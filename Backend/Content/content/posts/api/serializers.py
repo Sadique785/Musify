@@ -8,9 +8,14 @@ class UploadSerializer(serializers.ModelSerializer):
         fields = ['file_url', 'file_type', 'description']  
 
 class MediaSerializer(serializers.ModelSerializer):
+    post_count = serializers.SerializerMethodField()
     class Meta:
         model = Upload
-        fields = ['id', 'user', 'file_url', 'file_type', 'description', 'created_at', 'updated_at']
+        fields = ['id', 'user', 'file_url', 'file_type', 'description', 'created_at', 'updated_at', 'post_count']
+
+
+    def get_post_count(self, obj):
+        return obj.user.uploads.count()
 
 
 class ContentSerializer(serializers.ModelSerializer):

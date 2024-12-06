@@ -56,7 +56,7 @@ class FollowUserView(APIView):
         print('FollowRequested', FOLLOW_REQUESTED)
 
         self.kafka_producer.send_follow_event(FOLLOW_REQUESTED, sender.id, receiver.id)
-
+        self.kafka_producer.send_follow_notification(FOLLOW_REQUESTED, sender.id, receiver.id)
         
         return Response({"message": f"Follow request sent to {receiver.username}."}, status=status.HTTP_201_CREATED)
     
@@ -71,6 +71,7 @@ class FollowUserView(APIView):
             follow_request.cancel()
 
             self.kafka_producer.send_follow_event(FOLLOW_CANCELLED, sender.id, receiver.id)
+            self.kafka_producer.send_follow_notification(FOLLOW_CANCELLED, sender.id, receiver.id)
 
             return Response({"message": f"Follow request to {receiver.username} canceled."}, status=status.HTTP_200_OK)
         except FriendRequest.DoesNotExist:
@@ -95,6 +96,7 @@ class AcceptFollowRequestView(APIView):
         follow_request.accept()
 
         self.kafka_producer.send_follow_event(FOLLOW_ACCEPTED, sender.id, receiver.id)
+        self.kafka_producer.send_follow_notification(FOLLOW_ACCEPTED, sender.id, receiver.id)
 
 
         return Response({"message": f"You are now following {sender.username}."}, status=status.HTTP_200_OK)

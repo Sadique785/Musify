@@ -1,22 +1,66 @@
-// WaveformTrack.js
+// WaveformTrack.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { usePlayback } from '../../../../context/PlayBackContext';
+import AudioSplitter from './AudioSplitter';
 
-function WaveformTrack({ file_url, color, trackId, demoData, setDemoData, isCutting }) {
+function WaveformTrack({ file_url, position, segment, color, trackId, trackData, isCutting }) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const waveformRef = useRef(null);
   const wavesurferRef = useRef(null);
-  const { isPlaying, currentTime, startTimes, isDragging, trackVolumes } = usePlayback();
+  const { isPlaying, currentTime, isDragging, trackVolumes } = usePlayback();
   const [duration, setDuration] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const [isTrackCompleted, setIsTrackCompleted] = useState(false);
   const lastTimeRef = useRef(currentTime);
 
   const trackVolume = (trackVolumes[trackId] ?? 50) / 100;
+  const PIXELS_PER_SECOND = 50;
+  const segmentStartOffset = position / PIXELS_PER_SECOND;
 
+  const handleWaveformClick = () => {
+    if (isCutting) {
+      setIsModalOpen(true);
+    }
+  };
+
+  const normalizeTime = (time, totalDuration) => {
+    if (!isFinite(time) || isNaN(time)) return 0;
+    return Math.max(0, Math.min(time, totalDuration));
+  };
+
+  const calculatePlaybackTime = (globalTime) => {
+    const timeRelativeToSegmentPosition = globalTime - segmentStartOffset;
+    const segmentDuration = segment.endTime - segment.startTime;
+    const segmentRelativeTime = timeRelativeToSegmentPosition;
+    
+    // Only log when significant changes occur
+    if (Math.abs(lastTimeRef.current - globalTime) > 0.1) {
+      console.debug(`[Track ${trackId}] Playback Update:`, {
+        timeRelativeToSegmentPosition,
+        segmentDuration,
+        position,
+        containerWidth: waveformRef.current?.clientWidth
+      });
+    }
+    
+    return { timeRelativeToSegmentPosition, segmentRelativeTime };
+  };
+
+  const isTimeWithinSegment = (relativeTime) => {
+    const segmentDuration = segment.endTime - segment.startTime;
+    return relativeTime >= 0 && relativeTime < segmentDuration;
+  };
 
   useEffect(() => {
     if (!wavesurferRef.current) {
+      // Log container dimensions when creating wavesurfer instance
+      console.debug(`[Track ${trackId}] Container Dimensions:`, {
+        width: waveformRef.current?.clientWidth,
+        scrollWidth: waveformRef.current?.scrollWidth,
+        offsetWidth: waveformRef.current?.offsetWidth
+      });
+
       wavesurferRef.current = WaveSurfer.create({
         container: waveformRef.current,
         waveColor: color || '#BF7474',
@@ -24,51 +68,76 @@ function WaveformTrack({ file_url, color, trackId, demoData, setDemoData, isCutt
         barWidth: 2,
         height: 80,
         normalize: true,
+        partialRender: true,
         interact: false,
+        minPxPerSec: 50,
+        fillParent: true,
+        duration: 46,
+        responsive: true,
+        scrollParent: false, // Ensure this is false to prevent scrolling
+        hideScrollbar: true, // Hide the scrollbar
       });
-      console.log('WaveSurfer instance created');
+
       wavesurferRef.current.load(file_url);
-  
+
       wavesurferRef.current.on('ready', () => {
-        setDuration(wavesurferRef.current.getDuration());
+        const totalDuration = wavesurferRef.current.getDuration();
+        setDuration(totalDuration);
         setIsReady(true);
-      });
-  
-      wavesurferRef.current.on('finish', () => {
-        setIsTrackCompleted(true);
-        wavesurferRef.current.pause();
-        wavesurferRef.current.seekTo(1);
-      });
+        wavesurferRef.current.seekTo(0);
 
-      wavesurferRef.current.on('interaction', () => {
-        const clickTime = wavesurferRef.current.getCurrentTime();
-        console.log('Clicked time:', clickTime, trackId);
-        
-        // Update demoData with the clicked time
-        setDemoData(prevData => ({
-          ...prevData, 
-          id:trackId,
-          cutTime: clickTime
-        }));
+        // Log waveform dimensions after load
+        console.debug(`[Track ${trackId}] Waveform Ready:`, {
+          duration: totalDuration,
+          containerWidth: waveformRef.current?.clientWidth,
+          waveformWidth: wavesurferRef.current.drawer.width
+        });
       });
-
-
-      
-    } else {
-      console.log('WaveSurfer instance already exists');
-      wavesurferRef.current.load(file_url); // Reload only if file_url changes
     }
-  
+
     return () => {
-      console.log('Cleaning up WaveSurfer');
-      // Only destroy if absolutely necessary
       if (wavesurferRef.current) {
         wavesurferRef.current.destroy();
         wavesurferRef.current = null;
       }
     };
-  }, [file_url, color]);
-  
+  }, [file_url, color, segment.startTime, segment.endTime]);
+
+  useEffect(() => {
+    if (!wavesurferRef.current || !isReady || isDragging) return;
+
+    const { timeRelativeToSegmentPosition } = calculatePlaybackTime(currentTime);
+    const withinSegment = isTimeWithinSegment(timeRelativeToSegmentPosition);
+
+    if (withinSegment) {
+      setIsTrackCompleted(false);
+    }
+
+    if (Math.abs(currentTime - lastTimeRef.current) > 0.1 || isDragging) {
+      if (withinSegment) {
+        const seekPosition = timeRelativeToSegmentPosition / (segment.endTime - segment.startTime);
+        wavesurferRef.current.seekTo(seekPosition);
+      } else if (timeRelativeToSegmentPosition < 0) {
+        wavesurferRef.current.seekTo(0);
+        setIsTrackCompleted(false);
+      } else {
+        wavesurferRef.current.seekTo(1);
+        setIsTrackCompleted(true);
+      }
+    }
+
+    if (isPlaying && withinSegment && !isTrackCompleted) {
+      if (!wavesurferRef.current.isPlaying()) {
+        wavesurferRef.current.play();
+      }
+    } else {
+      if (wavesurferRef.current.isPlaying()) {
+        wavesurferRef.current.pause();
+      }
+    }
+
+    lastTimeRef.current = currentTime;
+  }, [currentTime, isPlaying, isReady, position, isDragging]);
 
   useEffect(() => {
     if (wavesurferRef.current) {
@@ -76,51 +145,29 @@ function WaveformTrack({ file_url, color, trackId, demoData, setDemoData, isCutt
     }
   }, [trackVolume]);
 
-
-
-  
-  
-
-  useEffect(() => {
-    if (!wavesurferRef.current || !isReady || isDragging) return;
-
-    const trackStartTime = startTimes[trackId] || 0;
-    const trackRelativeTime = Math.max(0, currentTime - trackStartTime);
-    const trackDuration = wavesurferRef.current.getDuration();
-
-    // Handle manual time change or track position change
-    if (Math.abs(currentTime - lastTimeRef.current) > 1 || isDragging) {
-      if (currentTime >= trackStartTime && trackRelativeTime < trackDuration) {
-        const seekPosition = trackRelativeTime / trackDuration;
-        wavesurferRef.current.seekTo(seekPosition);
-        setIsTrackCompleted(false);
-      } else if (currentTime < trackStartTime) {
-        wavesurferRef.current.seekTo(0);
-        setIsTrackCompleted(false);
-      } else if (trackRelativeTime >= trackDuration) {
-        wavesurferRef.current.seekTo(1);
-        setIsTrackCompleted(true);
-      }
-    }
-
-
-    // Handle playback
-    if (isPlaying && !isTrackCompleted) {
-      if (currentTime >= trackStartTime && trackRelativeTime < trackDuration) {
-        if (!wavesurferRef.current.isPlaying()) {
-          wavesurferRef.current.play();
-        }
-      } else {
-        wavesurferRef.current.pause();
-      }
-    } else {
-      wavesurferRef.current.pause();
-    }
-
-    lastTimeRef.current = currentTime;
-  }, [currentTime, isPlaying, isReady, startTimes, trackId, isTrackCompleted, isDragging]);
-
-  return <div ref={waveformRef} style={{ width: '100%' }} />;
+  return (
+    <div className="relative w-full h-full">
+      <div 
+        ref={waveformRef} 
+        style={{ 
+          width: "100%",
+          height: "80px",
+          transform: "translateZ(0)",
+          overflow: "hidden" // Ensure overflow is hidden
+        }} 
+        onClick={handleWaveformClick}
+        className={`${isCutting ? "cursor-pointer" : ""}`}
+      />
+      
+      <AudioSplitter
+        fileUrl={file_url}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        trackData={trackData}
+        segment={segment}
+      />
+    </div>
+  );
 }
 
 export default WaveformTrack;

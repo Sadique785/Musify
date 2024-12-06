@@ -12,12 +12,12 @@ import MediaDisplay from './InnerComponents/MediaDisplay';
 import {useSelector} from 'react-redux';
 import { useParams } from 'react-router-dom';
 import LoadingPlaceholder from '../../../pages/Admin/Loaders/LoadingPlaceholder';
-
+// import { usePostModal } from '../../../context/PostModalContext';
 
 function ProfileMid() {
 
   const { profile } = useContext(ProfileContext)
-  const { userProfile } = useContext(UserProfileContext)
+  const { userProfile, setPostCount } = useContext(UserProfileContext)
   const loggedInUsername = useSelector((state) => state.auth.user?.username)
   const { username } = useParams();
   const isOwnProfile = loggedInUsername === username;   
@@ -36,6 +36,8 @@ function ProfileMid() {
   const [uploadCount, setUploadCount] = useState(0);
   const [description, setDescription] = useState('');
 
+  // const { openPostModal } = usePostModal();
+
 
   useEffect(() => {
     const fetchMediaData = async () => {
@@ -46,7 +48,7 @@ function ProfileMid() {
           : `/content/uploads/${username}/`;
 
         const response = await axiosInstance.get(url);
-        console.log("Response from uploads endpoint:", response.data);
+        setPostCount(response?.data?.results[0].post_count)
         setMediaData(response.data.results);
       } catch (error) {
         console.error('Error fetching media data', error);
@@ -265,7 +267,7 @@ function ProfileMid() {
             ) : mediaData.length === 0 ? (
                 <EmptyState isOwnProfile={isOwnProfile} />
             ) : (
-                <MediaDisplay mediaData={mediaData} />
+                <MediaDisplay mediaData={mediaData}  />
             )}
 
 

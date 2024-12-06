@@ -1,8 +1,18 @@
 import React from 'react';
+import { usePostModal } from '../../../../context/PostModalContext';
 
 const MediaItem = ({ media }) => {
+    const { openPostModal } = usePostModal();
+
+    const handleDetailClick = () => {
+        openPostModal(media.id)
+
+    }
+
     return (
-        <div className="relative w-48 h-48 m-2 transition-transform transform hover:scale-105 hover:shadow-lg rounded-lg overflow-hidden bg-black flex items-center justify-center"> {/* Added flexbox centering */}
+        <div className="relative w-48 h-48 m-2 transition-transform transform hover:scale-105 hover:shadow-lg rounded-lg overflow-hidden bg-black flex items-center justify-center"
+             onClick={handleDetailClick}
+        > 
             {media.file_type === 'image' ? (
                 <img
                     src={media.file_url}

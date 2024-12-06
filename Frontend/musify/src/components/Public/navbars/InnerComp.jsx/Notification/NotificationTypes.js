@@ -1,0 +1,9 @@
+// NotificationTypes.js
+export const NOTIFICATION_TYPES = {
+    FOLLOW_REQUEST: 'FOLLOW_REQUEST',
+    FOLLOW_ACCEPT: 'FOLLOW_ACCEPT',
+    POST_COMMENT: 'POST_COMMENT',
+    POST_LIKE: 'POST_LIKE'
+  };
+
+  

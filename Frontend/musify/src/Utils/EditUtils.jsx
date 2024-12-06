@@ -1,6 +1,6 @@
 // colorUtils.js
 
-const COLORS = [
+export const COLORS = [
   '#FCA5A5', // Light red
   '#F9A8D4', // Light pink
   '#FDE047', // Light yellow
@@ -11,6 +11,7 @@ const COLORS = [
   '#C4B5FD', // Light purple
   '#FDBA74', // Light orange
 ];
+
 
 export function getRandomColor() {
   return COLORS[Math.floor(Math.random() * COLORS.length)];

@@ -6,12 +6,14 @@ import authReducer from './Slices/authSlice';
 import contentReducer from './Slices/contentSlice'; 
 import settingsReducer from './Slices/settingsSlice'; 
 import audioReducer from './Slices/audioSlice';
+import feedPostsReducer from './Slices/feedPostsSlice'
 
 
 
 const persistConfig = {
   key: 'root',
   storage,
+  blacklist: ['feedPosts'] 
 };
 
 const rootReducer = combineReducers({
@@ -19,6 +21,7 @@ const rootReducer = combineReducers({
   content: contentReducer,
   settings: settingsReducer,
   audio: audioReducer,
+  feedPosts: feedPostsReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

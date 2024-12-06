@@ -13,7 +13,7 @@ import ProfileUnblockButton from './InnerComponents/ProfileUnblockButton';
 
 
 function ProfileLeft() {
-  const { userProfile, setUserProfile, loading, isBlocked } = useContext(UserProfileContext);
+  const { userProfile, setUserProfile, loading, isBlocked, postCount } = useContext(UserProfileContext);
   const { setProfile: setGlobalProfile } = useContext(ProfileContext)
   const loggedInUsername = useSelector((state) => state.auth.user?.username)
   const navigate = useNavigate();
@@ -50,6 +50,8 @@ function ProfileLeft() {
     const file = e.target.files[0];
     if (file) {
       setSelectedImage(file);
+      
+      console.log(URL.createObjectURL(file), 'hereere')
       setImagePreview(URL.createObjectURL(file));  // Preview the selected image
     }
   };
@@ -302,7 +304,7 @@ function ProfileLeft() {
         </div>
   
         <div className="text-center">
-          <h3 className="text-xl font-semibold">10</h3>
+          <h3 className="text-xl font-semibold">{postCount ? postCount : 0}</h3>
           <p className="text-sm font-semibold text-gray-500">Posts</p>
         </div>
   

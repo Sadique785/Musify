@@ -16,6 +16,7 @@ const UserProfileProvider = ({ children, username }) => {
     followStatus: '',
   });
   const [loading, setLoading] = useState(true);
+  const [postCount, setPostCount] = useState(null);
   const [isBlocked, setIsBlocked] = useState(false);  // New state for blocked status
 
   useEffect(() => {
@@ -51,7 +52,7 @@ const UserProfileProvider = ({ children, username }) => {
   }, [username]);
 
   return (
-    <UserProfileContext.Provider value={{ userProfile, setUserProfile, loading, isBlocked }}>
+    <UserProfileContext.Provider value={{ userProfile, setUserProfile, loading, isBlocked, setPostCount, postCount }}>
       {children}
     </UserProfileContext.Provider>
   );

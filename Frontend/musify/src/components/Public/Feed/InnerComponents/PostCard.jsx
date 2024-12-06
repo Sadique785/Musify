@@ -27,6 +27,8 @@ function PostCard({ post, imageUrl, onPostClick, followStatus, updateFollowStatu
     const dropdownRef = useRef(null)
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isFollowing, setIsFollowing] = useState(false); 
+    const [isLikeDisabled, setIsLikeDisabled] = useState(false);
+
     
 
 
@@ -88,6 +90,9 @@ function PostCard({ post, imageUrl, onPostClick, followStatus, updateFollowStatu
 
 
     const handleLikeClick = () => {
+        if (isLikeDisabled) return; 
+
+        setIsLikeDisabled(true);
 
         const postId = id
         handleLikeToggle({
@@ -100,6 +105,10 @@ function PostCard({ post, imageUrl, onPostClick, followStatus, updateFollowStatu
             currentUser,
             gatewayUrl,
         });
+
+        setTimeout(() => {
+            setIsLikeDisabled(false);
+        }, 3000);
     };
 
     
