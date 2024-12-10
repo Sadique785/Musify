@@ -20,4 +20,5 @@ from django.urls import path,include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('connection/',include('notification.api.urls')),
+    path('connection/chat/',include('chat.api.urls')),
 ]

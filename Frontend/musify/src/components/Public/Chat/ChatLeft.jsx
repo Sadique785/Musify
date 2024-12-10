@@ -1,56 +1,72 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ChatUserItem from './ChatUserItem';
 
-// Demo data for chat users
-const demoUsers = [
-    {
-        id: 1,
-        username: 'johndoe',
-        profileImage: null,
-        lastMessage: 'Hey, how are you doing?',
-        lastMessageTime: '2m',
-    },
-    {
-        id: 2,
-        username: 'sarasmith',
-        profileImage: null,
-        lastMessage: 'Sounds great!',
-        lastMessageTime: '15m',
-    },
-    {
-        id: 3,
-        username: 'mikebrown',
-        profileImage: null,
-        lastMessage: 'See you tomorrow',
-        lastMessageTime: '1h',
-    },
-];
 
-// Chat Left Component
-function ChatLeft() {
-    const [selectedUser, setSelectedUser] = useState(null);
+function ChatLeft({ chatRooms, selectedUser, onUserSelect, currentUserId, backendUrl }) {
+  const navigate = useNavigate();
 
-    const handleUserSelect = (user) => {
-        setSelectedUser(user);
-    };
+  const getOtherParticipant = (participants) => {
+      return participants.find(participant => participant.id !== currentUserId);
+  };
 
-    return (
-        <div className="h-full border-r">
-            <div className="py-4 px-6 border-b">
-                <h2 className="text-2xl font-bold text-gray-800">Chats</h2>
-            </div>
-            <div className="p-4 space-y-2">
-                {demoUsers.map((user) => (
-                    <ChatUserItem
-                        key={user.id}
-                        user={user}
-                        onSelect={handleUserSelect}
-                        isSelected={selectedUser?.id === user.id}
-                    />
-                ))}
-            </div>
-        </div>
-    );
+  const handleUserSelect = (user) => {
+      navigate(`/chat/${user.id}`, {
+          state: {
+              user: {
+                  id: user.id,
+                  username: user.username,
+                  image_url: user.image_url
+              }
+          },
+          replace: true
+      });
+  };
+
+  return (
+      <div 
+          className="
+              h-full 
+              bg-[#f0f2f5] 
+              border-r 
+              border-gray-200 
+              shadow-sm
+          "
+      >
+          <div 
+              className="
+                  py-5 
+                  px-6 
+                  border-b 
+                  border-gray-200 
+                  bg-white 
+                  sticky 
+                  top-0 
+                  z-10
+              "
+          >
+              <h2 className="text-2xl  font-bold text-gray-800">Chats</h2>
+          </div>
+          <div className="overflow-y-auto h-[calc(100vh-80px)]">
+              {chatRooms.map((chatRoom) => {
+                  const otherUser = getOtherParticipant(chatRoom.participants);
+                  return (
+                      <ChatUserItem
+                          key={chatRoom.id}
+                          user={{
+                              ...otherUser,
+                              lastMessageTime: chatRoom.last_message_time,
+                              lastMessage: chatRoom.last_message
+                          }}
+                          onSelect={handleUserSelect}
+                          isSelected={selectedUser?.id === otherUser?.id}
+                          unreadCount={chatRoom.unread_count}
+                          backendUrl={backendUrl}
+                      />
+                  );
+              })}
+          </div>
+      </div>
+  );
 }
-
 export default ChatLeft;

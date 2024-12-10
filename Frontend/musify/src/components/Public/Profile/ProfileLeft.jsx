@@ -223,11 +223,28 @@ function ProfileLeft() {
     ) : (
       // Chat and Follow buttons when not blocked
       <>
-        <button className="bg-gray-800 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
-          <FaComments />
-          <span>Chat</span>
-        </button>
-        <ProfileFollowButton userId={userProfile.userId} followStatus={userProfile.followStatus} loading={loading}/>
+    <button 
+      onClick={() => {
+        navigate(`/chat/${userProfile.userId}`, {
+          state: {
+            user: {
+              id: userProfile.userId,
+              username: userProfile.username,
+              profile_image: userProfile.imageUrl
+            }
+          }
+        });
+      }}
+      className="bg-gray-800 hover:bg-gray-700 transition-colors duration-200 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+    >
+      <FaComments className="mr-2" />
+      <span>Chat</span>
+    </button>
+        <ProfileFollowButton 
+          userId={userProfile.userId} 
+          followStatus={userProfile.followStatus} 
+          loading={loading}
+        />
       </>
     )}
   </div>

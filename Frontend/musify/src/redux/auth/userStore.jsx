@@ -7,6 +7,7 @@ import contentReducer from './Slices/contentSlice';
 import settingsReducer from './Slices/settingsSlice'; 
 import audioReducer from './Slices/audioSlice';
 import feedPostsReducer from './Slices/feedPostsSlice'
+import chatReducer from './Slices/chatSlice';
 
 
 
@@ -22,6 +23,8 @@ const rootReducer = combineReducers({
   settings: settingsReducer,
   audio: audioReducer,
   feedPosts: feedPostsReducer,
+  chat: chatReducer,
+
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

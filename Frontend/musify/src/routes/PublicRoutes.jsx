@@ -62,6 +62,7 @@ function PublicRoutes() {
                 <Route path="/settings" element={<Settings />} /> 
                 <Route path="/error" element={<UserErrorPage />} />
                 <Route path="/chat" element={<ChatPage />} />
+                <Route path="/chat/:userId" element={<ChatPage />} />
 
 
             </Route>
