@@ -9,8 +9,6 @@ function FollowButton({ userId,postId, followStatus, updateFollowStatus , isSame
     const [followingStatus, setFollowingStatus] = useState(followStatus);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false)
     const { profile } = useContext(ProfileContext);
-    console.log(followStatus,'the status is this')
-
     useEffect(() => {
         setFollowingStatus(followStatus);
     }, [followStatus]);

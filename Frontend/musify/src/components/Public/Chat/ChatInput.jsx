@@ -3,9 +3,9 @@ import { Send, Paperclip, Smile } from 'lucide-react';
 
 const ChatInput = ({ newMessage, setNewMessage, onSendMessage }) => (
   <div className="sticky bottom-0 bg-white border-t p-4 flex items-center space-x-2 z-10">
-    <button className="text-gray-500 hover:text-blue-600">
+    {/* <button className="text-gray-500 hover:text-blue-600">
       <Paperclip size={24} />
-    </button>
+    </button> */}
     <button className="text-gray-500 hover:text-blue-600">
       <Smile size={24} />
     </button>

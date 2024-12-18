@@ -56,7 +56,13 @@ const feedPostsSlice = createSlice({
       state.isPaginationLoading = false;
       state.error = '';
       state.lastFetchTime = null;
-    }
+    },
+    prependNewPosts: (state, action) => {
+      const newPosts = action.payload;
+      const existingPostIds = new Set(state.trendingPosts.map(post => post.id));
+      const uniqueNewPosts = newPosts.filter(post => !existingPostIds.has(post.id));
+      state.trendingPosts = [...uniqueNewPosts, ...state.trendingPosts];
+    },
   }
 });
 
@@ -68,7 +74,8 @@ export const {
   setPaginationLoading,
   setError,
   updateFollowStatusInStore,
-  clearFeedData
+  clearFeedData,
+  prependNewPosts,
 } = feedPostsSlice.actions;
 
 export default feedPostsSlice.reducer;

@@ -2,6 +2,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { getRandomColor } from '../../../Utils/EditUtils';
 import { saveAudioFile, getAudioFile, deleteAudioFile } from '../../../indexedDb/indexedDb';
+import { calculatePositionForDuration } from './AudioUtils';
 
 const savedTracks = JSON.parse(localStorage.getItem('tracks') || '[]');
 
@@ -130,35 +131,46 @@ const audioSlice = createSlice({
 
       splitSegment: (state, action) => {
         const { trackId, segmentIndex, splitPoint, part1Data, part2Data } = action.payload;
+        
         const track = state.tracks.find(t => t.id === trackId);
         
         if (!track) {
           console.error('Track not found:', trackId);
           return;
         }
-      
-        // Find the segment to split
+        
         const segmentToSplit = track.segments.find(s => s.segmentIndex === segmentIndex);
+        
         if (!segmentToSplit) {
           console.error('Segment not found:', segmentIndex);
           return;
         }
-      
-        // Calculate the segment's duration
+        
+        // Preserve the original segment's position
+        const originalPosition = segmentToSplit.position || 0;
+        
+        // Calculate the duration of each new segment
         const segmentDuration = segmentToSplit.endTime - segmentToSplit.startTime;
+        const part1Duration = splitPoint;
+        const part2Duration = segmentDuration - splitPoint;
         
-
-        
-        // Get the highest existing segment index
+        // Find max segment index
         const maxSegmentIndex = Math.max(...track.segments.map(s => s.segmentIndex));
         
-        // Create two new segments with correct timing
+        // Calculate pixel width for each segment
+        const PIXELS_PER_SECOND = 50; // Adjust this to match your UI scaling
+        const part1Width = part1Duration * PIXELS_PER_SECOND;
+        const part2Width = part2Duration * PIXELS_PER_SECOND;
+        
+        // Create new segments
         const newSegment1 = {
           segmentIndex: segmentIndex,
           trackId: trackId,
           startTime: segmentToSplit.startTime,
           endTime: segmentToSplit.startTime + splitPoint,
-          segmentId: `${trackId}_${segmentIndex}`
+          segmentId: `${trackId}_${segmentIndex}`,
+          // Set position to the original segment's position
+          position: originalPosition
         };
         
         const newSegment2 = {
@@ -166,44 +178,43 @@ const audioSlice = createSlice({
           trackId: trackId,
           startTime: segmentToSplit.startTime + splitPoint,
           endTime: segmentToSplit.endTime,
-          segmentId: `${trackId}_${maxSegmentIndex + 1}`
+          segmentId: `${trackId}_${maxSegmentIndex + 1}`,
+          // Position the second segment right after the first segment
+          position: originalPosition + part1Width
         };
         
-        // Remove the original segment
+        // Remove original segment
         track.segments = track.segments.filter(s => s.segmentIndex !== segmentIndex);
         
-        // Add the new segments
+        // Add new segments
         track.segments.push(newSegment1, newSegment2);
         
-        // Sort segments by start time
+        // Sort segments
         track.segments.sort((a, b) => a.startTime - b.startTime);
         
-        // Reindex segments to ensure continuous numbering
+        // Reindex segments
         track.segments.forEach((segment, idx) => {
           segment.segmentIndex = idx + 1;
           segment.segmentId = `${trackId}_${idx + 1}`;
         });
-      
+        
         try {
-          // Delete the old segment's audio data
-          deleteAudioFile(trackId, true, segmentIndex).catch(console.error);
-      
-          // Save both new segments with their updated indices
+          // Delete old segment audio and save new segment audio files
+          deleteAudioFile(trackId, true, segmentIndex)
+            .then(() => console.log('Old segment audio deleted successfully'))
+            .catch(error => console.error('Error deleting old segment audio:', error));
+          
           track.segments.forEach((segment, idx) => {
             const audioData = idx === 0 ? part1Data : part2Data;
-            saveAudioFile(
-              trackId,
-              audioData,
-              true,
-              segment.segmentIndex
-            ).catch(console.error);
+            saveAudioFile(trackId, audioData, true, segment.segmentIndex)
+              .then(() => console.log(`Segment ${segment.segmentIndex} audio saved successfully`))
+              .catch(error => console.error(`Error saving audio for segment ${segment.segmentIndex}:`, error));
           });
-      
+          
         } catch (error) {
           console.error('Error handling audio data:', error);
         }
       },
-
 
     resetTracks: (state) => {
       state.tracks = initialState.tracks;

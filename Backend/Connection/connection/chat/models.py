@@ -2,6 +2,8 @@ from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 
+
+
 class ChatRoom(models.Model):
     participants = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='chat_rooms')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -39,7 +41,10 @@ class ChatRoom(models.Model):
         chat_room = cls.objects.create()
         chat_room.participants.add(user1, user2)
         return chat_room, True
-
+    
+    def unread_message_count(self, sender):
+        return self.messages.filter(is_read=False).exclude(sender=sender).count()
+    
     def __str__(self):
         participants_str = ' & '.join([user.username for user in self.participants.all()])
         return f"Chat between {participants_str}"

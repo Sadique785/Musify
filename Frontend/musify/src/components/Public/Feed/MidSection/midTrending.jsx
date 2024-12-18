@@ -21,6 +21,7 @@ import {
   updateFollowStatusInStore,
   clearFeedData,
   setPaginationLoading,
+  prependNewPosts,
 } from '../../../../redux/auth/Slices/feedPostsSlice';
 
 
@@ -39,9 +40,7 @@ function MidTrending() {
     isPaginationLoading
   } = useSelector((state) => state.feedPosts);
 
-  // const [posts, setPosts] = useState([]);
-  // const [loading, setLoading] = useState(true);
-  // const [error, setError] = useState(''); // New error state
+
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const { profile } = useContext(ProfileContext);
   const [shouldRefresh, setShouldRefresh] = useState(false)
@@ -50,9 +49,6 @@ function MidTrending() {
   const [followStatus, setFollowStatus] = useState({}); 
   // const [currentPage, setCurrentPage] = useState(1); // Start with page 1
   // const [hasMore, setHasMore] = useState(true);
-
-
-
 
     // Modal and upload state
   const [file, setFile] = useState(null);
@@ -193,6 +189,38 @@ function MidTrending() {
       }
     }, [currentPage]);
 
+
+
+    // In MidTrending component, add this separate useEffect:
+useEffect(() => {
+  const fetchNewPostsInBackground = async () => {
+    // Only proceed if we already have posts in Redux
+    if (posts.length === 0) return;
+
+    try {
+      const response = await axiosInstance.get('/content/trending/?page=1');
+      
+      if (response.data.results?.length > 0) {
+        dispatch(prependNewPosts(response.data.results));
+        
+        // Update follow status for new posts
+        const updatedFollowStatus = { ...followStatus };
+        response.data.results.forEach((post) => {
+          updatedFollowStatus[post.user_id] = post.follow_status;
+        });
+        setFollowStatus(updatedFollowStatus);
+      }
+    } catch (error) {
+      console.error('Background fetch failed:', error);
+    }
+  };
+
+  // Run once when component mounts and posts exist
+  fetchNewPostsInBackground();
+}, []); 
+
+
+
   useEffect(() => {
     if (isPostModalOpen) {
       // Disable scrolling on the body
@@ -208,13 +236,6 @@ function MidTrending() {
     };
   }, [isPostModalOpen]);
   
-
-//   const updateFollowStatus = (userId, status) => {
-//     setFollowStatus(prevStatus => ({
-//         ...prevStatus,
-//         [userId]: status,
-//     }));
-// };
 
 const updateFollowStatus = (userId, status) => {
   setFollowStatus(prevStatus => ({

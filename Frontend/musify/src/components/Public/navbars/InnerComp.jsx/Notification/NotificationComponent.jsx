@@ -8,13 +8,10 @@ import { useState } from 'react';
 const NotificationComponent = ({ userId, isOpen, onClose }) => {
   const navigate = useNavigate();
   const { notifications, isLoading } = useNotificationSocket(userId);
+  console.log('notifications',notifications)
 
 
 
-  const handleFollowBack = (senderUsername) => {;
-    console.log(`Follow back triggered for ${senderUsername}`);
-    // Implement follow back logic here
-  };
 
 
 
@@ -45,7 +42,6 @@ const NotificationComponent = ({ userId, isOpen, onClose }) => {
           <div key={notification?.id} className="p-4 hover:bg-gray-50 transition flex">
             <NotificationItem 
               notification={notification}
-              onFollowBack={handleFollowBack}
               onNavigateToProfile={handleNavigateToProfile}
               onCloseNotifications={onClose}
             />
