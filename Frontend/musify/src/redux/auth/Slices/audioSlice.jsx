@@ -1,3 +1,4 @@
+// VIEWPOSITION
 // audioSlice.js
 import { createSlice } from '@reduxjs/toolkit';
 import { getRandomColor } from '../../../Utils/EditUtils';
@@ -19,7 +20,8 @@ const createDefaultSegment = (track) => ({
   trackId: track.id,
   startTime: 0,
   endTime: track.durationInSeconds || 0,
-  position: 0 // Add default position
+  position: 0, // Add default position
+  viewPosition: 0 // Add default viewPosition
 });
 
 const convertDurationToSeconds = (duration) => {
@@ -40,8 +42,11 @@ const createInitialTrack = (id, number, name, duration) => ({
     trackId: id,
     startTime: 0,
     endTime: convertDurationToSeconds(duration),
+    position: 0,
+    viewPosition: 0
   }]
 });
+
 
 const initialState = {
   tracks: reorderTrackNumbers(savedTracks.length > 0
@@ -49,7 +54,8 @@ const initialState = {
         ...track,
         segments: Array.isArray(track.segments) ? track.segments.map(segment => ({
           ...segment,
-          position: segment.position || 0 // Add default position
+          position: segment.position || 0, // Add default position
+          viewPosition: segment.viewPosition || 0 // Add default viewPosition
         })) : [createDefaultSegment(track)]
       }))
     : [
@@ -102,7 +108,7 @@ const audioSlice = createSlice({
         }
       },
 
-      setAudioFile : (state, action) => {
+      setAudioFile: (state, action) => {
         const { trackId, file, fileName, duration } = action.payload;
         const track = state.tracks.find(t => t.id === trackId);
         if (track) {
@@ -124,7 +130,9 @@ const audioSlice = createSlice({
             trackId: numericTrackId,
             startTime: 0,
             endTime: duration,
-            segmentId: `${numericTrackId}_1`
+            segmentId: `${numericTrackId}_1`,
+            position: 0,
+            viewPosition: 0
           }];
         }
       },
@@ -146,8 +154,9 @@ const audioSlice = createSlice({
           return;
         }
         
-        // Preserve the original segment's position
+        // Preserve the original segment's position and viewPosition
         const originalPosition = segmentToSplit.position || 0;
+        const originalViewPosition = segmentToSplit.viewPosition || 0;
         
         // Calculate the duration of each new segment
         const segmentDuration = segmentToSplit.endTime - segmentToSplit.startTime;
@@ -169,8 +178,9 @@ const audioSlice = createSlice({
           startTime: segmentToSplit.startTime,
           endTime: segmentToSplit.startTime + splitPoint,
           segmentId: `${trackId}_${segmentIndex}`,
-          // Set position to the original segment's position
-          position: originalPosition
+          // Set position and viewPosition to the original segment's values
+          position: originalPosition,
+          viewPosition: originalViewPosition
         };
         
         const newSegment2 = {
@@ -180,7 +190,8 @@ const audioSlice = createSlice({
           endTime: segmentToSplit.endTime,
           segmentId: `${trackId}_${maxSegmentIndex + 1}`,
           // Position the second segment right after the first segment
-          position: originalPosition + part1Width
+          position: originalPosition + part1Width,
+          viewPosition: originalViewPosition + part1Width
         };
         
         // Remove original segment
@@ -231,6 +242,8 @@ const audioSlice = createSlice({
         track.segments.push({
           ...segment,
           segmentIndex,
+          position: segment.position || 0,
+          viewPosition: segment.viewPosition || 0
         });
       }
     },
@@ -242,8 +255,60 @@ const audioSlice = createSlice({
         const segment = track.segments.find(s => s.segmentIndex === segmentIndex);
         if (segment) {
           Object.assign(segment, updatedData);
+          
+          // Ensure position and viewPosition are synchronized
+          if ('position' in updatedData) {
+            segment.viewPosition = updatedData.position;
+          }
         }
       }
+    },
+    updateViewPositionsForZoom: (state, action) => {
+      const { previousZoom, newZoom } = action.payload;
+      const zoomRatio = newZoom / previousZoom;
+      
+      console.group('UpdateViewPositionsForZoom Debug');
+      console.log('Zoom Changes:', {
+        previousZoom,
+        newZoom,
+        zoomRatio,
+        isZoomingIn: zoomRatio > 1,
+        isZoomingOut: zoomRatio < 1
+      });
+    
+      state.tracks.forEach(track => {
+        console.group(`Track ${track.id} Segments`);
+        
+        if (track.segments) {
+          track.segments.forEach(segment => {
+            const oldPosition = segment.position;
+            const oldViewPosition = segment.viewPosition;
+            
+            // Only adjust non-zero positions
+            if (segment.position !== 0) {
+              // Calculate new viewPosition based on current viewPosition instead of position
+              const newViewPosition = Math.round(oldViewPosition * zoomRatio);
+              
+              console.log(`Segment ${segment.segmentIndex}:`, {
+                oldPosition,
+                oldViewPosition,
+                newViewPosition,
+                positionChange: newViewPosition - oldViewPosition,
+                calculation: `${oldViewPosition} * ${zoomRatio} = ${newViewPosition}`
+              });
+              
+              segment.viewPosition = newViewPosition;
+            } else {
+              console.log(`Segment ${segment.segmentIndex}: Anchored at position 0`);
+              segment.viewPosition = 0;
+            }
+          });
+        }
+        
+        console.groupEnd();
+      });
+      
+      console.groupEnd();
     },
 
     updateSegmentPosition: (state, action) => {
@@ -253,6 +318,8 @@ const audioSlice = createSlice({
         const segment = track.segments.find(s => s.segmentIndex === segmentIndex);
         if (segment) {
           segment.position = position;
+          // Set viewPosition to the same value as position
+          segment.viewPosition = position;
         }
       }
     },
@@ -281,7 +348,7 @@ const audioSlice = createSlice({
   },
 });
 
-export const { addTrack, removeTrack, updateTrack,changeTrackColor, setSelectedTrack, setAudioFile, splitSegment, resetTracks, addSegment,updateSegment, updateSegmentPosition, removeSegment } = audioSlice.actions;
+export const { addTrack, removeTrack, updateTrack, changeTrackColor, setSelectedTrack, setAudioFile, splitSegment, resetTracks, addSegment, updateSegment, updateSegmentPosition, removeSegment, updateViewPositionsForZoom } = audioSlice.actions;
 export const selectTracks = (state) => state.audio.tracks;
 export const selectSelectedTrack = (state) => state.audio.selectedTrack;
 

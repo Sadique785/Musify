@@ -5,7 +5,7 @@ import { selectTracks, setAudioFile, updateSegment, updateSegmentPosition } from
 import { getAudioFile } from '../../../../indexedDb/indexedDb';
 import DraggableTrack from './DraggableTrack';
 
-const RightContent = forwardRef(({ zoomLevel, onScroll }, ref) => {
+const RightContent = forwardRef(({ zoomLevel, onScroll, zoomedPositions,setZoomedPositions   }, ref) => {
   const tracks = useSelector(selectTracks);
   console.log('track', tracks )
   const contentRef = useRef(null);
@@ -66,12 +66,20 @@ const RightContent = forwardRef(({ zoomLevel, onScroll }, ref) => {
   //   }));
   // };
   const handleSegmentDrag = (trackId, segmentIndex, newPosition) => {
+    // Update Redux
     dispatch(updateSegmentPosition({
       trackId,
       segmentIndex,
       position: newPosition
     }));
+
+    // Update local zoomed positions state
+    setZoomedPositions(prev => ({
+      ...prev,
+      [`${trackId}_${segmentIndex}`]: newPosition
+    }));
   };
+
 
 
   useEffect(() => {
@@ -111,7 +119,7 @@ const RightContent = forwardRef(({ zoomLevel, onScroll }, ref) => {
                     });
                     
                     // Use the maximum position + width to determine container width
-                    const segmentEnd = segment.position + segmentWidth;
+                    const segmentEnd = (segment.viewPosition || segment.position || 0) + segmentWidth;
                     maxSegmentWidth = Math.max(maxSegmentWidth, segmentEnd);
                   }
                 }
@@ -142,6 +150,7 @@ const RightContent = forwardRef(({ zoomLevel, onScroll }, ref) => {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
+  
   return (
     <div
       ref={ref}
@@ -158,35 +167,38 @@ const RightContent = forwardRef(({ zoomLevel, onScroll }, ref) => {
           <div key={track.id} className="relative h-24">
             {track.audioFile ? (
               <div className="relative h-full">
-          {Array.isArray(track.segments) && 
-            [...track.segments].sort((a, b) => a.startTime - b.startTime).map((segment) => {
-              const segmentId = `${track.id}_${segment.segmentIndex}`;
-              const segmentWidth = trackWidths[track.id]?.find(
-                (widthObj) => widthObj.segmentIndex === segment.segmentIndex
-              )?.width;
+                {Array.isArray(track.segments) && 
+                  [...track.segments].sort((a, b) => a.startTime - b.startTime).map((segment) => {
+                    const segmentId = `${track.id}_${segment.segmentIndex}`;
+                    const segmentWidth = trackWidths[track.id]?.find(
+                      (widthObj) => widthObj.segmentIndex === segment.segmentIndex
+                    )?.width;
 
-              return (
-                <DraggableTrack
-                          key={segmentId}
-                          audioData={audioData[segmentId]}
-                          trackId={track.id}
-                          segment={segment}
-                          trackWidth={segmentWidth || 0}
-                          color={track.color}
-                          name={track.name}
-                          isCutting={isCutting}
-                          position={segment.position || 0} // Use position from Redux
-                          onPositionChange={(newPos) => 
-                            handleSegmentDrag(track.id, segment.segmentIndex, newPos)
-                          }
-                          trackData={track}
-                          handleClick={(clickX, width) => 
-                            handleClick(track.id, segment.segmentIndex, clickX, width)
-                          }
-                        />
-              );
-            })}
+                    // Use zoomed position from local state
+                    const currentViewPosition = zoomedPositions[segmentId] ?? (segment.viewPosition || segment.position || 0);
 
+                    return (
+                      <DraggableTrack
+                        key={segmentId}
+                        audioData={audioData[segmentId]}
+                        trackId={track.id}
+                        segment={segment}
+                        trackWidth={segmentWidth || 0}
+                        color={track.color}
+                        name={track.name}
+                        isCutting={isCutting}
+                        position={segment.position || 0}
+                        viewPosition={currentViewPosition}
+                        onPositionChange={(newPos) => 
+                          handleSegmentDrag(track.id, segment.segmentIndex, newPos)
+                        }
+                        trackData={track}
+                        handleClick={(clickX, width) => 
+                          handleClick(track.id, segment.segmentIndex, clickX, width)
+                        }
+                      />
+                    );
+                  })}
               </div>
             ) : (
               <div 

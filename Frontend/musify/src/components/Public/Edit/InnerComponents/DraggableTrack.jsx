@@ -16,6 +16,7 @@ const DraggableTrack = ({
   name,
   isCutting,
   position,
+  viewPosition, 
   onPositionChange,
   handleClick,
 }) => {
@@ -73,7 +74,7 @@ const DraggableTrack = ({
     setIsDragging(true);
     setContextIsDragging(true);
     setStartX(e.clientX);
-    setStartPos(position);
+    setStartPos(viewPosition);
     setZIndex(999);
   };
 
@@ -120,7 +121,7 @@ const DraggableTrack = ({
           isCutting ? 'cursor-crosshair' : 'cursor-move'
         } ${isDragging ? 'opacity-75' : ''}`}
         style={{
-          transform: `translateX(${position}px)`,
+          transform: `translateX(${viewPosition}px)`, // Use viewPosition for visual transform
           width: `${trackWidth}px`,
           height: '96px',
           userSelect: 'none',
@@ -150,7 +151,7 @@ const DraggableTrack = ({
               file_url={audioData}
               trackData={trackData}
               color={color}
-              position={position}
+              position={position} // Keep original position for WaveformTrack
               trackId={trackId}
               isCutting={isCutting}
               segment={segment}
