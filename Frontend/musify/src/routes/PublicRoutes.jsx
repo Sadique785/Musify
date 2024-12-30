@@ -20,7 +20,7 @@ import EditPage from "../pages/User/EditPage";
 import NetworkError from "../components/Public/NetworkError";
 import ChatPage from "../pages/User/ChatPage";
 import NotificationProvider from "../components/Public/navbars/InnerComp.jsx/Notification/NotificationManager";
-
+import Track from "../pages/User/Track";
 
 
 
@@ -57,8 +57,8 @@ function PublicRoutes() {
                 {/* <Route path="/profile" element={<Profile />} /> */}
                 <Route path="/profile/:username" element={<Profile />} />
 
-                <Route path="/explore" element={<Explore />} /> 
                 <Route path="/library" element={<Library />} /> 
+                <Route path="/track/:id" element={<Track />}/>
                 <Route path="/settings" element={<Settings />} /> 
                 <Route path="/error" element={<UserErrorPage />} />
                 <Route path="/chat" element={<ChatPage />} />

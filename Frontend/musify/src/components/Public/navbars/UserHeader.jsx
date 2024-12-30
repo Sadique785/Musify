@@ -143,7 +143,7 @@ function UserHeader() {
               <span className="text-sm">Feed</span>
             </NavLink>
 
-            <NavLink
+            {/* <NavLink
               to="/explore"
               className={({ isActive }) =>
                 `flex items-center space-x-1 px-3 py-1 rounded-full font-semibold transition ${
@@ -153,7 +153,7 @@ function UserHeader() {
             >
               <FaCompass className="text-sm" />
               <span className="text-sm">Explore</span>
-            </NavLink>
+            </NavLink> */}
 
             <NavLink
               to="/library"

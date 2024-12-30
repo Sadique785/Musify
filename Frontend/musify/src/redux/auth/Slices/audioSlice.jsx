@@ -1,4 +1,3 @@
-// VIEWPOSITION
 // audioSlice.js
 import { createSlice } from '@reduxjs/toolkit';
 import { getRandomColor } from '../../../Utils/EditUtils';

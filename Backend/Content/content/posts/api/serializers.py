@@ -3,9 +3,21 @@ from friends_content.models import FriendList, FriendRequest
 from posts.models import Upload, Comment, Like, Share, ReportedPost, ContentUser
 
 class UploadSerializer(serializers.ModelSerializer):
+    # Make content_source optional since it has a default value
+    content_source = serializers.CharField(required=False)
+    title = serializers.CharField(required=False)
+    
     class Meta:
         model = Upload
-        fields = ['file_url', 'file_type', 'description']  
+        fields = ['file_url', 'file_type', 'description', 'content_source', 'title']
+
+    def create(self, validated_data):
+        # If project_name is in the context, use it as title
+        if 'project_name' in self.context:
+            validated_data['title'] = self.context['project_name']
+        
+        # If content_source isn't provided, it will use the model's default ('UPLOAD')
+        return super().create(validated_data)
 
 class MediaSerializer(serializers.ModelSerializer):
     post_count = serializers.SerializerMethodField()
@@ -92,6 +104,22 @@ class ContentSerializer(serializers.ModelSerializer):
             return request.user == obj.user  # Check if the requesting user is the same as the post user
         return False
 
+class LibraryMediaSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField()  # This will use the __str__ method of the User model
+    
+    class Meta:
+        model = Upload
+        fields = [
+            'id',
+            'user',
+            'title',
+            'file_url',
+            'file_type',
+            'is_private',
+            'created_at',
+            'updated_at'
+        ]
+
 class UserCommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = ContentUser
@@ -115,12 +143,13 @@ class PostDetailSerializer(serializers.ModelSerializer):
     comments = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     recent_likes = serializers.SerializerMethodField()
+    title = serializers.CharField()  
 
 
     class Meta:
         model = Upload
         fields = [
-            'id', 'user', 'user_id', 'file_url', 'file_type', 'description',
+            'id', 'user', 'user_id', 'file_url', 'file_type', 'description','title',
             'likes_count', 'comments_count', 'shares_count',
             'comments', 'created_at', 'updated_at',
             'is_liked', 'recent_likes'

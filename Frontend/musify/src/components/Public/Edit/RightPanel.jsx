@@ -82,10 +82,10 @@ function RightPanel() {
 
   return (
     <div 
-      className="bg-[#060505] h-full flex flex-col"
+      className="bg-[#060505] h-full flex flex-col relative"
       onWheel={handleZoom}
     >
-      <div className="sticky top-0 pl-6 z-40 bg-[#060505]">
+      <div className="sticky top-0 pl-6  bg-[#060505]">
         <RightHeader 
           zoomLevel={zoomLevel}
           onScroll={handleScroll}

@@ -18,8 +18,7 @@ function MainHeader() {
   };
 
   return (
-    <header className="fixed top-0 left-0 w-full h-[60px] bg-[#060505 ] flex items-center justify-between px-4 z-10">
-      {/* Left Section - EditDropdown and Musify Icon/Text */}
+<header className="fixed top-0 left-0 w-full h-[60px] bg-[#060505] flex items-center justify-between px-4 z-[60]">    {/* Left Section - EditDropdown and Musify Icon/Text */}
       <div className="flex  items-center w-1/5 gap-2">
         {/* Dropdown Icon and Toggle */}
         <div className="relative">

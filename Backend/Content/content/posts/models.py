@@ -83,6 +83,17 @@ class Upload(models.Model):
         blank=True
     )   
 
+    CONTENT_SOURCE_CHOICES = [
+        ('UPLOAD', 'Direct Upload'),
+        ('EDITED_AUDIO', 'Edited Audio')
+    ]
+    
+    content_source = models.CharField(
+        max_length=20,
+        choices=CONTENT_SOURCE_CHOICES,
+        default='UPLOAD'
+    )
+
     def __str__(self):
         return f"{self.user.username} - {self.file_type}"
     @property

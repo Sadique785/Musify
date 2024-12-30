@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import FirstView,VerifyUserView, SaveUploadView, UserUploadsListView, TrendingContentView, PostDetailView, ReportedContentView, LikePostView, CommentPostView, FollowingContentView, ReportPostView, UpdateReviewStatusView, PostBlockToggleView
+from .views import FirstView,VerifyUserView, SaveUploadView, UserUploadsListView, TrendingContentView, PostDetailView, ReportedContentView, LikePostView, CommentPostView, FollowingContentView, ReportPostView, UpdateReviewStatusView, PostBlockToggleView, LibraryMediaView
 
 urlpatterns = [
     path('first/',FirstView.as_view(), name='first' ),
@@ -8,6 +8,7 @@ urlpatterns = [
     path('uploads/', UserUploadsListView.as_view(), name='user-uploads'), 
     path('uploads/<str:username>/', UserUploadsListView.as_view(), name='user-uploads-by-username'),
     path('trending/', TrendingContentView.as_view(), name='trending'), 
+    path('library-media/', LibraryMediaView.as_view(), name='library-media'), 
     path('following-posts/', FollowingContentView.as_view(), name='following-posts'), 
     path('reported/', ReportedContentView.as_view(), name='reported'), 
     path('post-detail/<int:pk>/', PostDetailView.as_view(), name='post-detail'), 

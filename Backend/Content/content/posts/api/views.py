@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status, generics, permissions
-from .serializers import UploadSerializer, MediaSerializer, ContentSerializer, PostDetailSerializer, ReportedPostViewSerializer, LikeSerializer, CommentSerializer, ReportedPostSerializer
+from .serializers import UploadSerializer, MediaSerializer, ContentSerializer, LibraryMediaSerializer, PostDetailSerializer, ReportedPostViewSerializer, LikeSerializer, CommentSerializer, ReportedPostSerializer
 from posts.models import Upload, ReportedPost, Like, Comment, ContentUser
 from django.db.models import Count, Q
 from friends_content.models import FriendList, FriendRequest
@@ -38,24 +38,25 @@ class VerifyUserView(APIView):
 
     
 class SaveUploadView(APIView):
-    permission_classes = [IsAuthenticated]  # Require authentication for this view
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        # Extract project_name if it exists in the request data
+        project_name = request.data.get('project_name')
+        
+        # Create serializer context with additional data if needed
+        context = {}
+        if project_name:
+            context['project_name'] = project_name
 
-        serializer = UploadSerializer(data=request.data)
-        print(request.user)
-        print(request.user.id)
+        serializer = UploadSerializer(data=request.data, context=context)
+        
         if serializer.is_valid():
+            # Save with the authenticated user
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_200_OK)
+        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        # serializer = UploadSerializer(data=request.data, context={'request': request})
-        # if serializer.is_valid():
-        #     serializer.save()  # The user will be set in the serializer
-        #     return Response(serializer.data, status=status.HTTP_201_CREATED)  # Return the serialized data
-        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class UserUploadsListView(generics.ListAPIView):
     serializer_class = MediaSerializer
@@ -86,28 +87,44 @@ class TrendingContentPagination(PageNumberPagination):
 class TrendingContentView(generics.ListAPIView):
     serializer_class = ContentSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class  = TrendingContentPagination
+    pagination_class = TrendingContentPagination
 
     def get_queryset(self):
-        user = self.request.user  # The current authenticated user
+        user = self.request.user
         
-        # Exclude posts from users blocked by the current user
         blocked_users_ids = user.blocked_users.values_list('id', flat=True)
-        
-        # Exclude posts from users who have blocked the current user
         users_that_blocked_me_ids = ContentUser.objects.filter(blocked_users=user).values_list('id', flat=True)
 
         queryset = Upload.objects.annotate(
-                likes_count=Count('liked_by')  # Change from 'likes' to 'liked_by'
-            ).filter(
-                is_active=True, 
-                is_private=False
-            ).exclude(
-                user_id__in=blocked_users_ids  # Exclude posts from blocked users
-            ).exclude(
-                user_id__in=users_that_blocked_me_ids  # Exclude posts from users who blocked the current user
-            ).order_by('-likes_count', '-created_at')
+            likes_count=Count('liked_by')
+        ).filter(
+            is_active=True,
+            is_private=False,
+              
+        ).exclude(
+            user_id__in=blocked_users_ids
+        ).exclude(
+            user_id__in=users_that_blocked_me_ids
+        ).order_by('-likes_count', '-created_at')
 
+        return queryset
+    
+    def get_serializer_context(self):
+        return {'request': self.request}
+    
+
+class LibraryMediaView(generics.ListAPIView):
+    serializer_class = LibraryMediaSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Upload.objects.filter(
+            user=user,
+            content_source='EDITED_AUDIO',
+            is_active=True
+        ).order_by('-created_at')
         return queryset
     
     def get_serializer_context(self):

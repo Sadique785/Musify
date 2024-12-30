@@ -4,13 +4,21 @@ import { usePlayback } from '../../../../context/PlayBackContext';
 import TrackDropdown from './TrackDropdown';
 import { useDispatch } from 'react-redux';
 import { removeTrack } from '../../../../redux/auth/Slices/audioSlice';
+import FXComponent from './FXComponent';
+
 
 const TrackItem = ({ track }) => {
+  const [isFXOpen, setFXOpen] = useState(false);
+
   const dispatch = useDispatch();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const { trackVolumes, updateTrackVolume } = usePlayback();
   const currentVolume = trackVolumes[track.id] ?? 50;
+
+  
+const openFX = () => setFXOpen(true);
+const closeFX = () => setFXOpen(false);
 
   const handleVolumeChange = (e) => {
     const volume = parseFloat(e.target.value);
@@ -75,9 +83,13 @@ const TrackItem = ({ track }) => {
         {/* Lower Section */}
         <div className="h-12 bg-[#282c32] bg-opacity-50 group-hover:bg-opacity-20 transition-all duration-200 px-4">
           <div className="flex items-center h-full space-x-4">
-            <button className="px-3 py-1 rounded-full bg-zinc-700/50 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs font-medium transition-all duration-200">
+          <button
+              className="px-3 py-1 rounded-full bg-zinc-700/50 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs font-medium transition-all duration-200"
+              onClick={openFX}
+            >
               FX
             </button>
+
             <div className="flex items-center flex-1 space-x-2">
               <Volume2 size={16} className="text-zinc-500" />
               <input
@@ -116,7 +128,12 @@ const TrackItem = ({ track }) => {
           onChangeColor={() => console.log('Change color clicked')}
         />
       )}
+          
+          {isFXOpen && <FXComponent track={track} onClose={closeFX} />}
+    
     </div>
+
+
   );
 };
 
