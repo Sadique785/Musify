@@ -116,3 +116,13 @@ class FriendRequest(models.Model):
             models.UniqueConstraint(fields=['sender', 'receiver'], name='unique_friend_request')
         ]
 
+
+class NotificationSettings(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='notification_settings')
+    is_enabled = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.user.username}'s notification settings"
+
+    class Meta:
+        verbose_name_plural = "Notification Settings"

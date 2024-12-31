@@ -1,4 +1,7 @@
 from rest_framework.views import APIView
+from django.db.models.functions import TruncMonth
+from django.db.models import Count
+from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework import status
 from authentication.models import CustomUser, Profile, Role, UserRole
@@ -14,6 +17,11 @@ from django.shortcuts import get_object_or_404
 from django.contrib.sessions.models import Session
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from datetime import timedelta
+from collections import OrderedDict
+from dateutil.relativedelta import relativedelta
+    
+
 
 
 
@@ -273,3 +281,56 @@ class AdminLogoutView(APIView):
         except Exception as e:
             print(f"Logout failed: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class UserGrowthDataView(APIView):
+    """
+    View to get user growth data for the past 6 months.
+    Returns monthly data with total and active users, including months with zero data.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        end_date = timezone.now()
+        start_date = end_date - timedelta(days=180)
+
+        # Initialize all 6 months properly
+        all_months = OrderedDict()
+        current_month = end_date
+        for _ in range(6):
+            month_str = current_month.strftime('%b')
+            all_months[month_str] = {'month': month_str, 'totalUsers': 0, 'activeUsers': 0}
+            current_month = current_month - relativedelta(months=1)  # Proper month subtraction
+
+        # Get total users by month
+        total_users = (
+            CustomUser.objects
+            .filter(date_joined__gte=start_date)
+            .annotate(month=TruncMonth('date_joined'))
+            .values('month')
+            .annotate(total_users=Count('id'))
+            .order_by('month')
+        )
+
+        # Get active users by month
+        active_users = (
+            CustomUser.objects
+            .filter(last_login__gte=start_date)
+            .annotate(month=TruncMonth('last_login'))
+            .values('month')
+            .annotate(active_users=Count('id'))
+            .order_by('month')
+        )
+
+        # Update with actual data where available
+        for entry in total_users:
+            month_str = entry['month'].strftime('%b')
+            if month_str in all_months:
+                all_months[month_str]['totalUsers'] = entry['total_users']
+
+        for entry in active_users:
+            month_str = entry['month'].strftime('%b')
+            if month_str in all_months:
+                all_months[month_str]['activeUsers'] = entry['active_users']
+
+        return Response(list(reversed(all_months.values()))) 

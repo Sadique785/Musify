@@ -42,3 +42,20 @@ def send_otp(email):
     send_mail(subject, message, email_from, recipient_list)
     return otp
 
+def send_email_verification_otp(email):
+    otp = str(random.randint(100000, 999999))
+    subject = 'Email Verification OTP'
+    message = (
+        f'Hello,\n\n'
+        f'You have requested to change your email on Musify.\n\n'
+        f'Your OTP (One-Time Password) code is {otp}. '
+        f'Please use this code to verify your email change.\n\n'
+        f'If you did not request this, please ignore this email.\n\n'
+        f'Best regards,\n'
+        f'The Musify Team'
+    )
+    email_from = settings.EMAIL_HOST_USER
+    recipient_list = [email]
+    send_mail(subject, message, email_from, recipient_list)
+    return otp
+

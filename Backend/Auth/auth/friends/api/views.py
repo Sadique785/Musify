@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
-from friends.models import FriendList, FriendRequest
+from friends.models import FriendList, FriendRequest, NotificationSettings
 from authentication.models import CustomUser
 from django.db import models
 from django.db.models import Q
@@ -201,3 +201,17 @@ class UserSearchView(APIView):
             return Response({"results": users_data.data}, status=status.HTTP_200_OK)
         else:
             return Response({"message": "No users found"}, status=status.HTTP_200_OK)
+
+
+class NotificationStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        settings, _ = NotificationSettings.objects.get_or_create(user=request.user)
+        return Response({"enabled": settings.is_enabled})
+
+    def post(self, request):
+        settings, _ = NotificationSettings.objects.get_or_create(user=request.user)
+        settings.is_enabled = not settings.is_enabled
+        settings.save()
+        return Response({"enabled": settings.is_enabled})

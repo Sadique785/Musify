@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import FirstView,VerifyUserView, SaveUploadView, UserUploadsListView, TrendingContentView, PostDetailView, ReportedContentView, LikePostView, CommentPostView, FollowingContentView, ReportPostView, UpdateReviewStatusView, PostBlockToggleView, LibraryMediaView
+from .views import FirstView,VerifyUserView, UserEngagementMetricsView, ContentDistributionView, SaveUploadView, UserUploadsListView, TrendingContentView, PostDetailView, ReportedContentView, LikePostView, CommentPostView, FollowingContentView, ReportPostView, UpdateReviewStatusView, PostBlockToggleView, LibraryMediaView
 
 urlpatterns = [
     path('first/',FirstView.as_view(), name='first' ),
@@ -17,7 +17,8 @@ urlpatterns = [
     path('report-post/', ReportPostView.as_view(), name='report-post'),
     path('review-status/', UpdateReviewStatusView.as_view(), name='update-review-status'),
     path('block-post/', PostBlockToggleView.as_view(), name='block-post'),  
-
+    path('distribution-data/', ContentDistributionView.as_view(), name='content-distribution-data'),
+    path('user-engagement-metrics/', UserEngagementMetricsView.as_view(), name='user-engagement-metrics'),
 
 
 

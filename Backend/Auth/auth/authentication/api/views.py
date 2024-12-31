@@ -12,7 +12,7 @@ from django.utils.decorators import method_decorator
 from django.shortcuts import get_object_or_404, render
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from authentication.api.services.send_otp import send_otp
+from authentication.api.services.send_otp import send_otp, send_email_verification_otp
 from django.views.decorators.csrf import ensure_csrf_cookie 
 from authentication.models import CustomUser, Profile, Talent, Genre
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
@@ -20,6 +20,9 @@ from .serializers import UserRegisterSerializer, VerifyEmailSerializer, UserLogi
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from authentication.kafka_utils.producer import KafkaProducerService
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -138,7 +141,143 @@ class VerifyOtp(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class SendEmailVerificationOTPView(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure user is logged in
 
+    def post(self, request):
+        try:
+            current_email = request.data.get('currentEmail')
+            new_email = request.data.get('newEmail')
+
+            if not current_email or not new_email:
+                return Response(
+                    {"message": "Both current email and new email are required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Check if the current email matches the authenticated user's email
+            if request.user.email != current_email:
+                return Response(
+                    {"message": "Current email does not match your account"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Check if new email already exists for another user
+            if CustomUser.objects.filter(email=new_email).exists():
+                return Response(
+                    {"message": "New email is already in use"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Generate and send OTP
+            otp = send_email_verification_otp(current_email)  # Send OTP to current email for verification
+
+            # Store OTP and both emails in session
+            request.session['email_verification_otp'] = otp
+            request.session['current_email'] = current_email
+            request.session['new_email'] = new_email
+            request.session.save()
+
+            return Response(
+                {"message": "OTP sent successfully to your current email"},
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            return Response(
+                {"message": "Failed to send OTP", "error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+class VerifyEmailUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            # Get data from request
+            received_otp = request.data.get('otp')
+            new_email = request.data.get('newEmail')
+            current_email = request.data.get('currentEmail')
+
+            # Get stored session data
+            stored_otp = request.session.get('email_verification_otp')
+            stored_new_email = request.session.get('new_email')
+
+            # Validate required fields
+            if not received_otp or not new_email:
+                return Response(
+                    {"message": "OTP and new email are required"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Verify session data exists
+            if not stored_otp or not stored_new_email:
+                return Response(
+                    {"message": "OTP session expired. Please request a new OTP"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Verify OTP matches
+            if str(stored_otp) != str(received_otp):
+                return Response(
+                    {"message": "Invalid OTP. Please try again"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Verify emails match
+            if stored_new_email != new_email:
+                return Response(
+                    {"message": "Email mismatch. Please try again"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Verify current email matches
+            if current_email != request.user.email:
+                return Response(
+                    {"message": "Current email does not match"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Update user's email
+            user = request.user
+            user.email = new_email
+            user.save()
+
+            # Get user's profile for image URL
+            try:
+                profile = Profile.objects.get(user=user)
+                image_url = profile.image.url
+            except Profile.DoesNotExist:
+                image_url = None  # or a default URL if you have one
+
+            # Prepare updated user data for Kafka
+            updated_user_data = {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'image_url': image_url,
+            }
+            print('Updated user data for Kafka:', updated_user_data)
+
+            # Send message through Kafka
+            kafka_producer = KafkaProducerService(config={})
+            kafka_producer.send_user_updation_message(updated_user_data)
+
+            # Clear session data after successful update
+            request.session.pop('email_verification_otp', None)
+            request.session.pop('new_email', None)
+            request.session.save()
+
+            return Response(
+                {"message": "Email updated successfully"}, 
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            logger.error(f"Error in VerifyEmailUpdateView: {type(e).__name__} - {str(e)}")
+            return Response(
+                {"message": "Failed to update email", "error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class LoginView(APIView):
     authentication_classes = []  

@@ -1,7 +1,7 @@
 # friends/api/urls.py
 
 from django.urls import path
-from .views import first, FollowUserView,AcceptFollowRequestView, UnfollowUserView, CheckBlockStatusView, BlockedUsersView, UserSearchView
+from .views import first, FollowUserView,AcceptFollowRequestView, NotificationStatusView, UnfollowUserView, CheckBlockStatusView, BlockedUsersView, UserSearchView
 
 urlpatterns = [
     path('status/', first.as_view(), name='first'),  
@@ -11,6 +11,7 @@ urlpatterns = [
     path('block-status/', CheckBlockStatusView.as_view(), name='block-status'),
     path('blocked-users/', BlockedUsersView.as_view(), name='blocked-users'),
     path('search/', UserSearchView.as_view(), name='user-search'),
+    path('notification-status/', NotificationStatusView.as_view(), name='notification-status'),
 
 
 ]

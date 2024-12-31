@@ -5,12 +5,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status, generics, permissions
 from .serializers import UploadSerializer, MediaSerializer, ContentSerializer, LibraryMediaSerializer, PostDetailSerializer, ReportedPostViewSerializer, LikeSerializer, CommentSerializer, ReportedPostSerializer
 from posts.models import Upload, ReportedPost, Like, Comment, ContentUser
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Avg, F, FloatField
 from friends_content.models import FriendList, FriendRequest
 from django.shortcuts import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
 from ..kafka_utils.producer import KafkaProducerService, LIKED, COMMENTED
-
+from django.db.models.functions import Cast
+from django.utils import timezone
+from datetime import timedelta
 
 
 
@@ -306,3 +308,82 @@ class PostBlockToggleView(APIView):
             return Response({'message': f'Post successfully {action}.'}, status=status.HTTP_200_OK)
         except Upload.DoesNotExist:
             return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class ContentDistributionView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        # Get the distribution of content types
+        distribution_data = (
+            Upload.objects.filter(is_active=True)
+            .values('file_type')
+            .annotate(value=Count('id'))
+            .order_by('-value')
+        )
+
+        # Transform the data to match the frontend requirements
+        formatted_data = []
+        for item in distribution_data:
+            formatted_data.append({
+                'name': self._get_display_name(item['file_type']),
+                'value': item['value']
+            })
+
+        return Response(formatted_data)
+
+    def _get_display_name(self, file_type):
+        """Convert file_type to a more readable display name"""
+        display_names = {
+            'image': 'Images',
+            'audio': 'Music Edits',
+            'text': 'Text Posts',
+            # Add more mappings as needed
+        }
+        return display_names.get(file_type.lower(), file_type.title())
+
+
+
+
+class UserEngagementMetricsView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        # Get time period from query params or default to last 30 days
+        days = int(request.query_params.get('days', 30))
+        time_threshold = timezone.now() - timedelta(days=days)
+
+        # Get active users in the time period
+        active_users = ContentUser.objects.filter(
+            uploads__created_at__gte=time_threshold
+        ).distinct().count()
+
+        # Calculate posts per user
+        total_posts = Upload.objects.filter(
+            created_at__gte=time_threshold,
+            is_active=True
+        ).count()
+        
+        posts_per_user = total_posts / active_users if active_users > 0 else 0
+
+        # Calculate interaction rate (percentage of posts with likes)
+        posts_with_interactions = Upload.objects.filter(
+            created_at__gte=time_threshold,
+            is_active=True,
+            liked_by__isnull=False
+        ).distinct().count()
+        
+        interaction_rate = (posts_with_interactions / total_posts * 100) if total_posts > 0 else 0
+
+        # For session time, you might need to implement session tracking
+        # This is a placeholder average session time in minutes
+        avg_session_time = 25  # Replace with actual session time calculation if you have session data
+
+        metrics_data = [{
+            'name': 'Average',
+            'postsPerUser': round(posts_per_user, 1),
+            'sessionTime': avg_session_time,
+            'interactionRate': round(interaction_rate, 1)
+        }]
+
+        return Response(metrics_data)
