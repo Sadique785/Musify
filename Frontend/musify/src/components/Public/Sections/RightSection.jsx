@@ -13,8 +13,8 @@ function RightSection() {
   return (
     <div className="w-1/4   p-4 feed-container ">
       {isFeedPage  && <FeedRight /> }
-      {isLibraryPage && <LibRight />}
-      {isProfile && <ProfileRight />}
+      {isLibraryPage && <FeedRight />}
+      {isProfile && <FeedRight />}
     </div>
   );
 }

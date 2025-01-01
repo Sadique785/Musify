@@ -23,3 +23,9 @@ class UserSerializer(serializers.ModelSerializer):
             return profile.image.url if profile.image else None
         except Profile.DoesNotExist:
             return None
+
+
+class UnfollowedUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'username', 'email']

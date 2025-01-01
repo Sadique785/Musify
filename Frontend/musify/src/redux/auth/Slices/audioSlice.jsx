@@ -53,15 +53,13 @@ const initialState = {
         ...track,
         segments: Array.isArray(track.segments) ? track.segments.map(segment => ({
           ...segment,
-          position: segment.position || 0, // Add default position
-          viewPosition: segment.viewPosition || 0 // Add default viewPosition
+          position: segment.position || 0,
+          viewPosition: segment.viewPosition || 0
         })) : [createDefaultSegment(track)]
       }))
     : [
-        createInitialTrack(1, 1, 'Vocal Track', '3:15'),
-        createInitialTrack(2, 2, 'Guitar Track', '2:45'),
-        createInitialTrack(3, 3, 'Drums Track', '3:30'),
-        createInitialTrack(4, 4, 'Bass Track', '4:05'),
+        // Changed from 4 tracks to just 1 default track
+        createInitialTrack(1, 1, 'Audio Track', '3:00'), // Using generic name 'Audio Track' with 3-minute duration
       ]),
   selectedTrack: null,
 };

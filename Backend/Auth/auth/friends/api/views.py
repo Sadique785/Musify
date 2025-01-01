@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
 from friends.models import FriendList, FriendRequest, NotificationSettings
@@ -9,8 +9,9 @@ from authentication.models import CustomUser
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
-from .serializers import UserSerializer
+from .serializers import UserSerializer, UnfollowedUserSerializer
 from authentication.kafka_utils.producer import KafkaProducerService, FOLLOW_ACCEPTED,FOLLOW_CANCELLED,FOLLOW_REQUESTED,UNFOLLOW
+from random import sample
 
 
 User = get_user_model()
@@ -19,8 +20,6 @@ User = get_user_model()
 class first(APIView):
     permission_classes = [IsAuthenticated]
     
-
-
     def get(self,request):
         print('user friend: ',request.user)
         return Response({'message':'Reached at friends house'}, status=status.HTTP_200_OK) 
@@ -215,3 +214,45 @@ class NotificationStatusView(APIView):
         settings.is_enabled = not settings.is_enabled
         settings.save()
         return Response({"enabled": settings.is_enabled})
+
+
+
+class UnfollowedAccountsView(generics.ListAPIView):
+    serializer_class = UnfollowedUserSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        
+        try:
+            friend_list = FriendList.objects.get(user=user)
+            mutual_friends = friend_list.friends.all()
+        except FriendList.DoesNotExist:
+            mutual_friends = CustomUser.objects.none()
+            
+        following_requests = FriendRequest.objects.filter(sender=user, is_active=True)
+        following_users = [request.receiver for request in following_requests]
+        
+        following_users_ids = set(mutual_friends.values_list('id', flat=True)) | set([user.id for user in following_users])
+        blocked_users_ids = user.blocked_users.values_list('id', flat=True)
+        users_that_blocked_me_ids = CustomUser.objects.filter(blocked_users=user).values_list('id', flat=True)
+        
+        queryset = CustomUser.objects.exclude(
+            id__in=following_users_ids
+        ).exclude(
+            id__in=blocked_users_ids
+        ).exclude(
+            id__in=users_that_blocked_me_ids
+        ).exclude(
+            id=user.id
+        ).filter(
+            is_active=True
+        )
+
+        # Get random 4 users
+        user_ids = list(queryset.values_list('id', flat=True))
+        if len(user_ids) > 4:
+            random_ids = sample(user_ids, 4)
+            queryset = queryset.filter(id__in=random_ids)
+        
+        return queryset

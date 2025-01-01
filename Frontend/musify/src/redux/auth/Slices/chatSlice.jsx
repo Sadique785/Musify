@@ -16,7 +16,12 @@ const chatSlice = createSlice({
     error: null,
     lastFetchTime: null,
     isWebSocketConnected: false,
-    currentOpenChatRoomId: null
+    currentOpenChatRoomId: null,
+    // Use objects instead of Set for processed messages
+    processedMessages: {
+      byId: {},  // Store processed message IDs as object keys
+      byRoomTimestamp: {}  // Store last processed timestamp per room
+    }
   },
   reducers: {
     setInitialChatRooms: (state, action) => {
@@ -80,52 +85,73 @@ const chatSlice = createSlice({
     incrementUnreadCount: (state, action) => {
       console.log('Increment Unread Count Called with:', {
         action: action.payload,
-        currentOpenChatRoomId: state.currentOpenChatRoomId,
-        chatRooms: state.chatRooms
+        currentState: state
       });
-    
+
       const { room_id, last_message, last_message_timestamp } = action.payload;
       
-      // First, check if this is the current open chat room
-      console.log('Checking room match:', {
-        room_id,
-        currentOpenChatRoomId: state.currentOpenChatRoomId,
-        isNotCurrentRoom: room_id !== state.currentOpenChatRoomId
-      });
-    
-      // Only proceed if this is NOT the currently open room
-      if (room_id !== state.currentOpenChatRoomId) {
-        const roomIndex = state.chatRooms.findIndex(room => room.id === room_id);
+      // Skip if this is the current open chat room
+      if (room_id === state.currentOpenChatRoomId) {
+        return;
+      }
+
+      const roomIndex = state.chatRooms.findIndex(room => room.id === room_id);
+      if (roomIndex === -1) return;
+
+      let shouldIncrement = false;
+
+      // If we have a last_message, use its ID for deduplication
+      if (last_message?.id) {
+        // Check if we've already processed this message
+        if (!state.processedMessages.byId[last_message.id]) {
+          // Mark the message as processed
+          state.processedMessages.byId[last_message.id] = true;
+          shouldIncrement = true;
+        }
+      } else if (last_message_timestamp) {
+        // Use timestamp-based deduplication
+        const lastProcessedTime = state.processedMessages.byRoomTimestamp[room_id];
         
-        console.log('Room Index found:', {
-          roomIndex,
-          roomId: room_id
-        });
-    
-        if (roomIndex !== -1) {
-          // Log current unread count
-          const currentUnreadCount = state.chatRooms[roomIndex].unread_count || 0;
-          
-          console.log('Current Unread Count:', {
-            currentUnreadCount,
-            room: state.chatRooms[roomIndex]
-          });
-    
-          // Unconditionally increment (for testing)
-          state.chatRooms[roomIndex] = {
-            ...state.chatRooms[roomIndex],
-            unread_count: currentUnreadCount + 1
-          };
-          
-          console.log('After increment:', {
-            newUnreadCount: state.chatRooms[roomIndex].unread_count,
-            room: state.chatRooms[roomIndex]
-          });
-    
-          state.chatRooms = sortRoomsByLastMessage(state.chatRooms);
+        if (!lastProcessedTime || 
+            new Date(lastProcessedTime).getTime() !== new Date(last_message_timestamp).getTime()) {
+          // Update the last processed timestamp for this room
+          state.processedMessages.byRoomTimestamp[room_id] = last_message_timestamp;
+          shouldIncrement = true;
         }
       }
+
+      // Only increment if we haven't processed this message before
+      if (shouldIncrement) {
+        console.log('Incrementing unread count for room:', room_id);
+        const currentUnreadCount = state.chatRooms[roomIndex].unread_count || 0;
+        state.chatRooms[roomIndex] = {
+          ...state.chatRooms[roomIndex],
+          unread_count: currentUnreadCount + 1
+        };
+
+        state.chatRooms = sortRoomsByLastMessage(state.chatRooms);
+      } else {
+        console.log('Skipping increment - message already processed');
+      }
     },
+
+    cleanupProcessedMessages: (state) => {
+      // Get all message IDs
+      const messageIds = Object.keys(state.processedMessages.byId);
+      
+      // Keep only the last 1000 message IDs
+      if (messageIds.length > 1000) {
+        const newMessageIds = messageIds.slice(-1000);
+        const newById = {};
+        
+        newMessageIds.forEach(id => {
+          newById[id] = true;
+        });
+        
+        state.processedMessages.byId = newById;
+      }
+    },
+  
 
     resetUnreadCountForRoom: (state, action) => {
       const roomIndex = state.chatRooms.findIndex(room => room.id === action.payload);
@@ -151,6 +177,7 @@ export const {
   resetUnreadCountForRoom,
   setCurrentOpenChatRoom,
   incrementUnreadCount,
+  cleanupProcessedMessages,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

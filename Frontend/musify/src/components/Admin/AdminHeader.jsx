@@ -99,9 +99,7 @@ function AdminHeader({}) {
       <h1 className="text-4xl font-bold">{getPageTitle()}</h1>
 
       <div className="flex items-center space-x-4 relative">
-        <div className="bg-gray-700 p-2 rounded-full cursor-pointer">
-          <FaSearch size={20} />
-        </div>
+
 
         <div 
           className="bg-gray-700 p-2 rounded-full cursor-pointer relative" 
@@ -126,16 +124,7 @@ function AdminHeader({}) {
             style={{ top: "100%" }}
           >
             <ul>
-              <li 
-                className="flex items-center px-4 py-2 cursor-pointer hover:bg-gray-600 hover:text-[#36B9B7] hover:rounded-md transition-colors duration-300"
-                onClick={(e) => {
-                  e.stopPropagation();  // Prevent dropdown from closing
-                  navigate('/admin/profile');  // Navigate to profile
-                }}
-              >
-                <FaUser className="mr-2" />  {/* Icon for Profile */}
-                Profile
-              </li>
+
               <li 
                 className="flex items-center px-4 py-2 cursor-pointer hover:bg-gray-600 hover:text-[#36B9B7] hover:rounded-md transition-colors duration-300"
                 onClick={(e) => {

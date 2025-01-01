@@ -9,7 +9,8 @@ import {
   setInitialChatRooms,
   setCurrentOpenChatRoom,
   incrementUnreadCount,
-  updateSingleRoom
+  updateSingleRoom,
+  cleanupProcessedMessages,
 } from '../../redux/auth/Slices/chatSlice';
 
 function ChatPage() {
@@ -50,8 +51,9 @@ function ChatPage() {
           break;
         case 'room_order_update':
           dispatch(updateRoomOrder(data));
-          console.log('data before increment', data)
           dispatch(incrementUnreadCount(data));
+          // Periodically cleanup old processed messages
+          dispatch(cleanupProcessedMessages());
           break;
         default:
           console.log('Unhandled message type:', data.type);
