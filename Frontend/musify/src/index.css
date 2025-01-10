@@ -1,10 +1,17 @@
-@import '../node_modules/slick-carousel/slick/slick.css';
-@import '../node_modules/slick-carousel/slick/slick-theme.css';
+/* Import slick carousel styles using proper URL imports */
+@import 'slick-carousel/slick/slick.css';
+@import 'slick-carousel/slick/slick-theme.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-
+/* Add any custom base styles here */
+@layer base {
+  body {
+    @apply font-mulish;
+  }
+}
 
 .text-gradient {
     background: linear-gradient(90deg, #BF7474, #e6d5d5);

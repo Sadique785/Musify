@@ -39,7 +39,7 @@ function FeedLeft() {
             <span>Following</span>
           </button>
     
-          <button
+          {/* <button
             onClick={() => handleContentChange('music')}
             className={`${buttonClass} ${selectedContent === 'music' ? 'bg-gray-200 w-56 font-semibold' : 'hover:bg-gray-200 w-56'}`}
           >
@@ -47,7 +47,7 @@ function FeedLeft() {
               <FaMusic className="text-gray-700" />
             </div>
             <span>Music</span>
-          </button>
+          </button> */}
         </div>
       );
 }

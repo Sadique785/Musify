@@ -13,14 +13,31 @@ const reorderTrackNumbers = (tracks) => {
   }));
 };
 
-// Helper to create a default segment (entire track)
+// In audioSlice.js, update your createDefaultSegment function:
+const defaultEffects = {
+  reverb: {
+    enabled: false,
+    roomSize: 0.5,    // 0 to 1
+    decay: 1.5,       // 0.1 to 10
+    wet: 0.3         // 0 to 1
+  },
+  noiseCancellation: {
+    enabled: false,
+    threshold: -40,   // -60 to 0
+    reduction: -20,   // -100 to 0
+    attack: 0.1,      // 0 to 1
+    release: 0.2      // 0 to 1
+  }
+};
+
+
 const createDefaultSegment = (track) => ({
   segmentIndex: 1,
   trackId: track.id,
   startTime: 0,
   endTime: track.durationInSeconds || 0,
-  position: 0, // Add default position
-  viewPosition: 0 // Add default viewPosition
+  position: 0,
+  viewPosition: 0,
 });
 
 const convertDurationToSeconds = (duration) => {
@@ -36,13 +53,14 @@ const createInitialTrack = (id, number, name, duration) => ({
   color: getRandomColor(),
   audioFile: null,
   fileName: null,
+  effects: defaultEffects,  // Move effects to track level
   segments: [{
     segmentIndex: 1,
     trackId: id,
     startTime: 0,
     endTime: convertDurationToSeconds(duration),
     position: 0,
-    viewPosition: 0
+    viewPosition: 0,
   }]
 });
 
@@ -260,6 +278,18 @@ const audioSlice = createSlice({
         }
       }
     },
+      // In audioSlice.js
+      updateTrackEffects: (state, action) => {
+        const { trackId, effectType, parameters } = action.payload;
+        const track = state.tracks.find(t => t.id === trackId);
+        if (track) {
+          track.effects[effectType] = {
+            ...track.effects[effectType],
+            ...parameters
+          };
+        }
+      },
+
     updateViewPositionsForZoom: (state, action) => {
       const { previousZoom, newZoom } = action.payload;
       const zoomRatio = newZoom / previousZoom;

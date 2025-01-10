@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { usePlayback } from '../../../../context/PlayBackContext';
 import AudioSplitter from './AudioSplitter';
+import AudioEffectsProcessor from './FXComponents/AudioEffectsProcessor';
 
 function WaveformTrack({ file_url, position, segment, color, trackId, trackData, isCutting }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -153,12 +154,19 @@ function WaveformTrack({ file_url, position, segment, color, trackId, trackData,
           width: "100%",
           height: "80px",
           transform: "translateZ(0)",
-          overflow: "hidden" // Ensure overflow is hidden
+          overflow: "hidden"
         }} 
         onClick={handleWaveformClick}
         className={`${isCutting ? "cursor-pointer" : ""}`}
       />
       
+      {/* Updated AudioEffectsProcessor - removed segmentIndex prop */}
+      {isReady && wavesurferRef.current && (
+        <AudioEffectsProcessor
+          wavesurfer={wavesurferRef.current}
+          trackId={trackId}
+        />
+      )}
       <AudioSplitter
         fileUrl={file_url}
         isOpen={isModalOpen}
