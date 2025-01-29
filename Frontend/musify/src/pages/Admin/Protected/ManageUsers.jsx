@@ -6,12 +6,12 @@ import { useNavigate } from 'react-router-dom';
 import UserLoader from '../Loaders/UserLoader';
 import debounce from "lodash.debounce";
 import FilterComponent from '../../../components/Admin/InnerComponents/FilterComponent';
-
+import { getBackendUrl } from '../../../services/config';
 
 function ManageUsers() {
   const [adminProfileImage, setAdminProfileImage] = useState('');
   const [users, setUsers] = useState([]); 
-  const [searchResults, setSearchResults] = useState([]); // Holds the results of search
+  const [searchResults, setSearchResults] = useState([]); 
   const [filteredUsers, setFilteredUsers] = useState([]); // Holds the results after filtering
   const [totalUsers, setTotalUsers] = useState(0);
   const [activeUsers, setActiveUsers] = useState(0);
@@ -22,9 +22,7 @@ function ManageUsers() {
   const navigate = useNavigate();
   const [selectedFilter, setSelectedFilter] = useState("All"); // Track the selected filter
 
-
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
-
+  const backendUrl = getBackendUrl();
   // useEffect to fetch users data
   useEffect(() => {
     const fetchUserData = async () => {

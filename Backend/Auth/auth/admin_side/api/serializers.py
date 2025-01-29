@@ -52,7 +52,7 @@ class RoleSerializer(serializers.ModelSerializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-    profile_image = serializers.ImageField(source='image', allow_null=True, required=False)
+    profile_image = serializers.SerializerMethodField()
     talents = TalentSerializer(many=True, read_only=True)
     genres = GenreSerializer(many=True, read_only=True)
     friends_count = serializers.IntegerField(source='get_friends_no', read_only=True)
@@ -63,6 +63,14 @@ class ProfileSerializer(serializers.ModelSerializer):
             'name', 'location', 'is_online', 'bio', 'date_of_birth', 
             'gender', 'profile_image', 'talents', 'genres', 'friends_count'
         ]
+
+    def get_profile_image(self, obj):
+        # First check for image_url, then fall back to image.url
+        if obj.image_url:
+            return obj.image_url
+        elif obj.image:
+            return obj.image.url
+        return None
 
 class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer(read_only=True)
@@ -79,9 +87,15 @@ class UserSerializer(serializers.ModelSerializer):
             'profile_image', 'user_role'
         ]
 
+
     def get_profile_image(self, obj):
-        if hasattr(obj, 'user_profile') and obj.user_profile.image:
-            return obj.user_profile.image.url
+        if hasattr(obj, 'user_profile'):
+            profile = obj.user_profile
+            # Check image_url first, then fall back to image.url
+            if profile.image_url:
+                return profile.image_url
+            elif profile.image:
+                return profile.image.url
         return None
     
     def get_user_role(self, obj):

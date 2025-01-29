@@ -7,11 +7,14 @@ import { useDispatch } from "react-redux";
 import { logout } from "../../redux/auth/Slices/authSlice";
 import { persistor } from "../../redux/auth/userStore";
 import { AdminProfileContext } from "../../context/AdminProfileContext";
+import { getBackendUrl } from "../../services/config";
 
 function AdminHeader({}) {
   const location = useLocation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for dropdown visibility
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  // const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const backendUrl = getBackendUrl();
+
   const dropdownRef = useRef(null); // Ref for detecting clicks outside
   const navigate = useNavigate();  // For redirecting after logout
   const [loading, setLoading] = useState(false);  // State to track loading status
@@ -67,14 +70,14 @@ function AdminHeader({}) {
 
         if (response.status === 200) {
             dispatch(logout());  
-            console.log('Admin logout successful');
+            // console.log('Admin logout successful');
 
             await persistor.purge();
-            console.log('Persistor cleared');
+            // console.log('Persistor cleared');
 
             navigate('/admin/login');
         } else {
-            console.error('Admin logout failed', response.data);
+            // console.error('Admin logout failed', response.data);
         }
     } catch (error) {
         console.error('An error occurred during admin logout: ', error);
@@ -82,7 +85,7 @@ function AdminHeader({}) {
       setLoading(false);  // Stop loading after the API call completes
   }
 
-    console.log('Admin logout triggered');
+    // console.log('Admin logout triggered');
 };
 
 
@@ -107,7 +110,7 @@ function AdminHeader({}) {
         >
           {adminProfileImage ? (
             <img
-              src={`${backendUrl}${adminProfileImage}`}
+              src={`${adminProfileImage}`}
               alt="Admin Profile"
               className="w-10 h-10 rounded-full"
             />

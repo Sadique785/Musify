@@ -54,6 +54,6 @@ const optimisticComment = {
         setCommentCount((prevCount) => prevCount - 1); // Revert the comment count
 
         toast.error('Failed to add comment');
-        console.error('Error submitting comment:', error);
+        // console.error('Error submitting comment:', error);
     }
 };

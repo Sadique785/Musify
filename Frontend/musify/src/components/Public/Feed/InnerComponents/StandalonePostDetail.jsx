@@ -11,9 +11,9 @@ import CommentSection from './CommentSection';
 import ReportModal from './ReportModal';
 import { ProfileContext } from '../../../../context/ProfileContext';
 import BlockConfirmationModal from './BlockConfirmationModal';
+import { getBackendUrl } from '../../../../services/config';
 
 const StandalonePostDetail = ({ postId, onClose }) => {
-    console.log('posterid ',postId)
   const [postDetails, setPostDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState('');
@@ -32,14 +32,13 @@ const StandalonePostDetail = ({ postId, onClose }) => {
   const currentUser = useSelector((state) => state.auth.user);
   const { profile } = useContext(ProfileContext);
   const dropdownRef = useRef(null);
-  const gatewayUrl = import.meta.env.VITE_BACKEND_URL;
+  const gatewayUrl = getBackendUrl();
 
   useEffect(() => {
     const fetchPostDetails = async () => {
       setLoading(true);
       try {
         const response = await axiosInstance.get(`/content/post-detail/${postId}/`);
-        console.log('newData',response.data)
         setPostDetails(response.data);
         setComments(response.data.comments);
         setCommentCount(response.data.comments_count)

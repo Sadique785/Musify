@@ -19,7 +19,6 @@ function ProfileUnblockButton({ userId, onUnblock }) {
       }
     } catch (error) {
       toast.error("Failed to unblock user.");
-      console.error("Unblock error:", error);
     }
   };
 

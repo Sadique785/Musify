@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from friends_content.models import FriendList, FriendRequest
 from posts.models import Upload, Comment, Like, Share, ReportedPost, ContentUser
+from django.db.models import Exists, OuterRef
+
 
 class UploadSerializer(serializers.ModelSerializer):
     # Make content_source optional since it has a default value
@@ -29,18 +31,16 @@ class MediaSerializer(serializers.ModelSerializer):
     def get_post_count(self, obj):
         return obj.user.uploads.count()
 
-
 class ContentSerializer(serializers.ModelSerializer):
-    likes_count = serializers.IntegerField(source='liked_by.count', read_only=True)
-    comments_count = serializers.IntegerField(source='comments.count', read_only=True)
-    shares_count = serializers.IntegerField(source='shares.count', read_only=True)
+    likes_count = serializers.IntegerField(read_only=True)
+    comments_count = serializers.IntegerField(read_only=True)
+    shares_count = serializers.IntegerField(read_only=True)
     user = serializers.StringRelatedField()
     user_id = serializers.IntegerField(source='user.id', read_only=True)
     is_liked = serializers.SerializerMethodField()
     recent_likes = serializers.SerializerMethodField()
     follow_status = serializers.SerializerMethodField()
     is_same_user = serializers.SerializerMethodField()
-
 
     class Meta:
         model = Upload
@@ -54,29 +54,26 @@ class ContentSerializer(serializers.ModelSerializer):
     def get_is_liked(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            return obj.liked_by.filter(pk=request.user.pk).exists()
+            return obj.liked_by.filter(id=request.user.id).exists()
         return False
 
     def get_recent_likes(self, obj):
-        recent_likes = obj.liked_by.all().order_by('-id')[:10]
-        return [user.username for user in recent_likes]
+        return [user.username for user in obj.liked_by.all()[:10]]
 
     def get_follow_status(self, obj):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return 'follow'
 
-        post_user = obj.user  # The user related to the post
-        requesting_user = request.user  # The user making the request
+        post_user = obj.user
+        requesting_user = request.user
 
-        # If the requesting user is viewing their own post
         if requesting_user == post_user:
             return 'same_user'
 
         if FriendList.objects.filter(user=post_user, friends=requesting_user).exists():
             return 'unfollow'
 
-        # Check follow request statuses
         following_request = FriendRequest.objects.filter(
             sender=requesting_user,
             receiver=post_user,
@@ -97,11 +94,11 @@ class ContentSerializer(serializers.ModelSerializer):
             return 'unfollow'
         else:
             return 'follow'
-        
+
     def get_is_same_user(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            return request.user == obj.user  # Check if the requesting user is the same as the post user
+            return request.user == obj.user
         return False
 
 class LibraryMediaSerializer(serializers.ModelSerializer):

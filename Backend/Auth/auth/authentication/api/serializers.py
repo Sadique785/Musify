@@ -114,7 +114,7 @@ class UserLoginSerializer(serializers.Serializer):
 class ProfileImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        fields = ['user', 'image']
+        fields = ['user', 'image_url']
 
 class ProfileSerializer(serializers.ModelSerializer):
     talents = serializers.ListField(child=serializers.CharField(), write_only=True)
@@ -173,102 +173,82 @@ class GenreSerializer(serializers.ModelSerializer):
         fields = ['name']
 
 
-
 class ProfileViewSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(source='user.username')  # Accessing the username from the related `user`
+    username = serializers.CharField(source='user.username')
     user_id = serializers.IntegerField(source='user.id')
     email = serializers.EmailField(source='user.email')
-    image_url = serializers.SerializerMethodField()  
+    image_url = serializers.SerializerMethodField()
     talents = serializers.SerializerMethodField()
     genres = serializers.SerializerMethodField()
-    following_count = serializers.SerializerMethodField()  
-    followers_count = serializers.SerializerMethodField()  
+    following_count = serializers.SerializerMethodField()
+    followers_count = serializers.SerializerMethodField()
     follow_status = serializers.SerializerMethodField()
     is_blocked = serializers.SerializerMethodField()
-
 
     class Meta:
         model = Profile
         fields = [
-            'username', 
+            'username',
             'user_id',
             'email',
-            'image_url', 
-            'location', 
-            'gender', 
-            'date_of_birth', 
-            'talents', 
-            'genres', 
-            'following_count',  
-            'followers_count', 
+            'image_url',
+            'location',
+            'gender',
+            'date_of_birth',
+            'talents',
+            'genres',
+            'following_count',
+            'followers_count',
             'follow_status',
             'is_blocked',
         ]
 
     def get_is_blocked(self, obj):
-        print(f'THis is the get_is_blocked function {self.context.get('is_blocked')}')
         return self.context.get("is_blocked", False)
-    
+
+
     def get_image_url(self, obj):
-        if obj.image:
-            return f"{settings.MEDIA_URL}{obj.image}"
-        return None
+        """Return the URL from `image_url` or a default if not set."""
+        return obj.image_url
+
 
     def get_talents(self, obj):
+        # Uses prefetched talents
         return [talent.name for talent in obj.talents.all()]
 
     def get_genres(self, obj):
+        # Uses prefetched genres
         return [genre.name for genre in obj.genres.all()]
-    
+
     def get_following_count(self, obj):
-        friend_list = FriendList.objects.filter(user=obj.user).first()  
-        if friend_list:
-            return friend_list.following_count()  # Call the method from FriendList if it exists
-        else:
-            return FriendRequest.get_following_count(obj.user)  # Directly call the static method
+        # Uses computed attribute from view
+        return getattr(obj, 'following_count', 0)
 
     def get_followers_count(self, obj):
-        friend_list = FriendList.objects.filter(user=obj.user).first()  
-        if friend_list:
-            return friend_list.followers_count()  # Call the method from FriendList if it exists
-        else:
-            return FriendRequest.get_followers_count(obj.user)
+        # Uses computed attribute from view
+        return getattr(obj, 'followers_count', 0)
 
     def get_follow_status(self, obj):
         request = self.context.get('request')
-        
         if not request or not request.user.is_authenticated:
-            print('it is returning from here')
             return 'follow'
 
-        profile_user = obj.user
-        requesting_user = request.user
-
-        if requesting_user == profile_user:
+        if request.user.id == obj.user.id:
             return 'same_user'
 
-        # Check if already friends
-        if FriendList.objects.filter(user=profile_user, friends=requesting_user).exists():
-            print('Already friends, returning unfollow')
+        # Check if users are following each other using prefetched data
+        is_following = request.user.id in [user.id for user in obj.followers.all()]
+        is_followed = obj.user.id in [user.id for user in request.user.user_profile.followers.all()]
+
+        if is_following and is_followed:
             return 'unfollow'
-
-        # Check follow request statuses
-        following_request = FriendRequest.objects.filter(sender=requesting_user, receiver=profile_user, is_active=True).exists()
-        following_profile_user = FriendRequest.objects.filter(sender=profile_user, receiver=requesting_user, is_active=True).exists()
-        
-        # Debug output for request states
-        print(f"following_request (Micky following Dhinu-21): {following_request}")
-        print(f"following_profile_user (Dhinu-21 following Micky): {following_profile_user}")
-
-        if following_request and not following_profile_user:
+        elif is_following and not is_followed:
             return 'following'
-        elif following_profile_user and not following_request:
+        elif not is_following and is_followed:
             return 'follow back'
-        elif following_request and following_profile_user:
-            return 'unfollow'
         else:
             return 'follow'
-        
+
     def to_representation(self, instance):
         """
         Customize representation to restrict data if the profile is blocked.
@@ -282,7 +262,6 @@ class ProfileViewSerializer(serializers.ModelSerializer):
                 "is_blocked": True,
             }
         return rep
-
 
 class BlockUserSerializer(serializers.Serializer):
     user_id = serializers.IntegerField()

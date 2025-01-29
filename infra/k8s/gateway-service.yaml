@@ -1,0 +1,110 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gateway-service-secret
+stringData:
+  SECRET_KEY: "django-insecure-3b4i4!p3a3i$zi==u)$a9rf(i+aiv@&ni*7a1ean-*x85nz&hn"
+type: Opaque
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-service-configmap
+data:
+  DEBUG: "True"  
+  ALLOWED_HOSTS: "musify.sadique.live,localhost,127.0.0.1,gateway-service,gateway-service.default.svc.cluster.local"
+  
+  AUTH_SERVICE_URL: "http://auth-service:8001/auth"
+  ADMIN_SERVICE_URL: "http://auth-service:8001/admin-side"
+  FRIENDS_SERVICE_URL: "http://auth-service:8001/friends"
+  MEDIA_SERVICE_URL: "http://auth-service:8001"  
+  CONTENT_SERVICE_URL: "http://content-service:8002/content"
+  CONNECTION_SERVICE_URL: "http://connection-service:8003/connection"
+
+  CORS_ALLOWED_ORIGINS: "https://musify.sadique.live,http://localhost:3000,http://localhost:5173"
+  CSRF_TRUSTED_ORIGINS: "https://musify.sadique.live,http://localhost:3000,http://localhost:5173"
+  SESSION_COOKIE_NAME: "sessionid"
+  CSRF_COOKIE_NAME: "csrftoken"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service
+spec:
+  selector:
+    app: gateway-service
+  type: ClusterIP
+  ports:
+    - port: 8000           
+      targetPort: 8000     
+      protocol: TCP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gateway-sqlite-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-service
+  labels:
+    app: gateway-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 3
+  template:
+    metadata:
+      labels:
+        app: gateway-service
+    spec:
+      initContainers:
+        - name: init-db
+          image: vssadique123/musify_gateway:v0.9
+          command: ['python', 'manage.py', 'migrate']
+          envFrom:
+            - configMapRef:
+                name: gateway-service-configmap
+            - secretRef:
+                name: gateway-service-secret
+          volumeMounts:
+            - name: sqlite-data
+              mountPath: /app/db
+      containers:
+        - name: gateway-service
+          image: vssadique123/musify_gateway:v0.9
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: gateway-service-configmap
+            - secretRef:
+                name: gateway-service-secret
+          volumeMounts:
+            - name: sqlite-data
+              mountPath: /app/db
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+      volumes:
+        - name: sqlite-data
+          persistentVolumeClaim:
+            claimName: gateway-sqlite-data

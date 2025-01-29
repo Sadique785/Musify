@@ -5,13 +5,14 @@ import { FaHeart, FaComment } from 'react-icons/fa';
 import AudioPlayer from '../../components/Public/Track/AudioPlayer';
 import axiosInstance from '../../axios/axios';
 import { ProfileContext } from '../../context/ProfileContext';
+import { getBackendUrl } from '../../services/config';
 
 
 
 const Track = () => {
   const { profile } = useContext(ProfileContext);
   console.log('profile',profile);
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const backendUrl = getBackendUrl();
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
   const [trackData, setTrackData] = useState(null);
@@ -82,7 +83,7 @@ const Track = () => {
           <div className="w-64 h-64 relative rounded-lg overflow-hidden bg-gray-500">
                 {profile.imageUrl ? (
                     <img
-                    src={`${backendUrl}${profile.imageUrl}`}
+                    src={`${profile.imageUrl}`}
                     alt="Profile"
                     className="absolute inset-0 w-full h-full object-cover"
                     />

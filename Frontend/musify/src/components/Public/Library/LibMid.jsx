@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Import, Search } from 'lucide-react';
 import LibItem from './InnerComponents/LibItem';
 import FilterDropdown from './InnerComponents/FilterDropdown';
 import axiosInstance from '../../../axios/authInterceptor';
+import LibraryShimmer from '../Profile/InnerComponents/LibraryShimmer';
+import EmptyState from '../Profile/InnerComponents/EmptyState';
+
+
 function LibMid() {
   const [filter, setFilter] = useState('all');
   const [projects, setProjects] = useState([]);
@@ -15,11 +19,9 @@ function LibMid() {
       try {
         setLoading(true);
         const response = await axiosInstance.get('/content/library-media/');
-        console.log('API Response:', response.data); // Console log the response data
         setProjects(response.data);
         setError(null);
       } catch (err) {
-        console.error('Error fetching projects:', err);
         setError('Failed to fetch projects');
       } finally {
         setLoading(false);
@@ -29,13 +31,7 @@ function LibMid() {
     fetchProjects();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-gray-500">Loading...</div>
-      </div>
-    );
-  }
+
 
   if (error) {
     return (
@@ -73,11 +69,25 @@ function LibMid() {
   
       {/* Scrollable Projects List */}
       <div className="flex-1 overflow-y-auto p-4">
-        {projects?.map((project) => (
-          <LibItem key={project?.id} project={project} />
-        ))}
+      {loading ? (
+          // Shimmer loading state - showing 5 shimmer items
+          <>
+            {[...Array(5)].map((_, index) => (
+              <LibraryShimmer key={index} />
+            ))}
+          </>
+        ) : error ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-red-500">{error}</div>
+          </div>
+        ) : projects.length === 0 ? (
+          <EmptyState isOwnProfile={true} />
+        ) : (
+          projects?.map((project) => (
+            <LibItem key={project?.id} project={project} />
+          ))
+        )}
       </div>
-
     </div>
   );
 }

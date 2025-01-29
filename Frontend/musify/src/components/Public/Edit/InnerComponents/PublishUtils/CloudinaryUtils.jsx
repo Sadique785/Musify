@@ -1,19 +1,22 @@
 import axiosInstance from "../../../../../axios/authInterceptor";
 import axios from 'axios';
-
+import { getConfig } from "../../../../../config";
 
 export class CloudinaryUtils {
   constructor() {
-    this.cloudinaryUrl = `${import.meta.env.VITE_CLOUDINARY_URL}/upload`;
+    const { cloudinaryUrl: baseCloudinaryUrl } = getConfig(); // Dynamically get the Cloudinary URL
+    this.cloudinaryUrl = `${baseCloudinaryUrl}/upload`; // Construct the upload URL
+    // console.log('Using Cloudinary URL:', this.cloudinaryUrl); // Log the Cloudinary URL
   }
+  
 
   async verifySession() {
     try {
       const response = await axiosInstance.get('/content/verify-user/');
-      console.log('Session verification successful');
+      // console.log('Session verification successful');
       return true;
     } catch (error) {
-      console.error('Session verification failed:', error);
+      // console.error('Session verification failed:', error);
       return false;
     }
   }
@@ -42,11 +45,12 @@ export class CloudinaryUtils {
           const percentCompleted = Math.round(
             (progressEvent.loaded * 100) / progressEvent.total
           );
-          console.log('Upload progress:', percentCompleted + '%');
+          // console.log('Upload progress:', percentCompleted + '%');
         }
       });
 
       if (response.status === 200) {
+
         console.log('Cloudinary upload successful:', {
           url: response.data.secure_url,
           publicId: response.data.public_id
@@ -56,7 +60,7 @@ export class CloudinaryUtils {
         throw new Error('Cloudinary upload failed');
       }
     } catch (error) {
-      console.error('Error during Cloudinary upload:', error);
+      // console.error('Error during Cloudinary upload:', error);
       throw error;
     }
   }

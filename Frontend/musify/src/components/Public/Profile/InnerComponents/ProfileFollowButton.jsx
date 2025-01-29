@@ -15,9 +15,6 @@ function ProfileFollowButton({ userId, followStatus, loading }) {
   const handleFollowToggle = async () => {
     if (loading) return;  // Prevent action if loading is still true
 
-    console.log('User ID:', userId);
-    console.log('Current follow status:', followingStatus);
-    console.log('status passed', followStatus);
 
     try {
       let response;

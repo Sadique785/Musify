@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useParams, useLocation  } from 'react-router-dom';
+import { useParams, useLocation, useNavigate  } from 'react-router-dom';
 import ChatLeft from '../../components/Public/Chat/ChatLeft';
 import ChatRight from '../../components/Public/Chat/ChatRight';
+import { useBeforeUnload } from 'react-router-dom';
 import { 
   setWebSocketConnected,
   updateRoomOrder,
@@ -11,26 +12,47 @@ import {
   incrementUnreadCount,
   updateSingleRoom,
   cleanupProcessedMessages,
+  setSelectedUser,
+  setUserId,
+  updateChatRooms,
 } from '../../redux/auth/Slices/chatSlice';
+
+import { getBackendUrl } from '../../services/config';
+import { getConfig } from '../../config';
+
 
 function ChatPage() {
   const dispatch = useDispatch();
-  const { userId } = useParams();
+  // const { userId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
+  // const { userId, selectedUser } = useSelector(state => state.chat);
+  const { userId, selectedUser } = useSelector(state => {
+
+    return state.chat;
+  });
   const { chatRooms, isWebSocketConnected } = useSelector((state) => state.chat);
-  const [selectedUser, setSelectedUser] = useState(null);
   const currentUserId = useSelector((state) => state.auth.user.id);
+  const username = useSelector((state) => state.auth.user.username);
   const chatRoomsWsRef = useRef(null);
   const privateMessageWsRef = useRef(null);
   const [messages, setMessages] = useState([]);
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
-  
+  const backendUrl = getBackendUrl();
+  const { connectionUrl } = getConfig();
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'wss:';
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [newChat, setNewChat] = useState(false);
 
-  // Connect to chat rooms WebSocket
+
+
+
   const connectChatRoomsWebSocket = () => {
     if (chatRoomsWsRef.current?.readyState === WebSocket.OPEN) return;
+    const wsChatRoomUrl = `${wsProtocol}//${connectionUrl}/ws/chat-list/${currentUserId}/`;
 
-    const ws = new WebSocket(`ws://localhost:8003/ws/chat-rooms/${currentUserId}/`);
+
+    const ws = new WebSocket(wsChatRoomUrl);
+
     
     ws.onopen = () => {
       console.log('Chat rooms WebSocket connected');
@@ -40,30 +62,14 @@ function ChatPage() {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       console.log('WebSocket data:', data);
-      
-      switch (data.type) {
-        case 'initial_chat_rooms':
-          dispatch(setInitialChatRooms(data.chat_rooms));
-          break;
-        case 'room_update':
-        case 'new_room':
-          dispatch(updateSingleRoom(data.room));
-          break;
-        case 'room_order_update':
-          dispatch(updateRoomOrder(data));
-          dispatch(incrementUnreadCount(data));
-          // Periodically cleanup old processed messages
-          dispatch(cleanupProcessedMessages());
-          break;
-        default:
-          console.log('Unhandled message type:', data.type);
-      }
+
+      dispatch(updateChatRooms(data));
+    
     };
 
     ws.onclose = () => {
       console.log('Chat rooms WebSocket disconnected');
       dispatch(setWebSocketConnected(false));
-      setTimeout(connectChatRoomsWebSocket, 3000);
     };
 
     ws.onerror = (error) => {
@@ -74,102 +80,89 @@ function ChatPage() {
     chatRoomsWsRef.current = ws;
   };
 
-  // Connect to private message WebSocket
-  const connectPrivateMessageWebSocket = async (otherUserId) => {
-    // First, close existing connection if any
-    if (privateMessageWsRef.current) {
-      privateMessageWsRef.current.close();
-      privateMessageWsRef.current = null;
-      // Wait for the connection to fully close
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
 
-    const ws = new WebSocket(`ws://localhost:8003/ws/private-message/${currentUserId}/${otherUserId}/`);
-    
-    ws.onopen = () => {
-      console.log('Private message WebSocket connected for user:', otherUserId);
-    };
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log('Received WebSocket message:', data);
-      
-      switch (data.type) {
-        case 'history':
-          setMessages(data.messages);
-          break;
-        case 'message':
-          setMessages(prevMessages => [...prevMessages, data.message]);
-          break;
-        default:
-          console.log('Unhandled message type:', data.type, 'Full data:', data);
-      }
-    };
-
-    ws.onclose = () => {
-      console.log('Private message WebSocket disconnected');
-    };
-
-    ws.onerror = (error) => {
-      console.error('Private message WebSocket error:', error);
-      ws.close();
-    };
-
-    privateMessageWsRef.current = ws;
-  };
-
-  // Initial setup effect
   useEffect(() => {
     console.log('ChatPage - Initial setup');
-    connectChatRoomsWebSocket();
+      connectChatRoomsWebSocket();
 
+
+    
     return () => {
       if (chatRoomsWsRef.current) chatRoomsWsRef.current.close();
       if (privateMessageWsRef.current) privateMessageWsRef.current.close();
     };
   }, []);
 
-  // Handle user selection from URL params and state
   useEffect(() => {
-    console.log('ChatPage - URL params changed', { userId, locationState: location.state });
-    
-    if (userId && location.state?.user) {
-      const userFromState = location.state.user;
-      console.log('ChatPage - Setting user from state:', userFromState);
-
-      const currentChatRoom = chatRooms.find(room => 
-        room.participants.some(p => p.id === parseInt(userId))
-      );
-      dispatch(setCurrentOpenChatRoom(currentChatRoom ? currentChatRoom.id : null));
-
-      setSelectedUser(userFromState);
-      connectPrivateMessageWebSocket(userId);
+    if (location.state?.user) {
+      const newChatUser = location.state.user;
+      setNewChat(true);
+      
+      // Wrap these dispatches in a setTimeout to ensure they run after any pathname changes
+      setTimeout(() => {
+        dispatch(setSelectedUser({
+          id: newChatUser.id,
+          username: newChatUser.username,
+          image_url: newChatUser.profile_image  
+        }));
+        dispatch(setUserId(newChatUser.id));
+      }, 0);
     }
-  }, [userId, location.state, chatRooms, dispatch]);
+  }, [location.state, dispatch]);
+
+
+  useEffect(() => {
+    // Only reset if we're not coming from a new chat state
+    if (!location.state?.user) {
+      dispatch(setUserId(null));
+      dispatch(setSelectedUser(null));
+    }
+  }, [location.pathname]);
+
+  // Optional: Handle page refresh
+  useBeforeUnload(() => {
+    dispatch(setUserId(null));
+    dispatch(setSelectedUser(null));
+    navigate(location.pathname, { replace: true, state: {} });
+    setNewChat(false)
+
+    
+  });
+
 
   return (
     <div className="min-h-[calc(60vh-80px)] w-full bg-blue-50">
       <div className="max-w-[1920px] mx-auto px-4 py-2">
         <div className="bg-white rounded-lg shadow-md feed-container overflow-hidden">
-          <div className="flex h-[calc(100vh-120px)]">
-            <div className="w-1/4 border-r border-gray-200">
+          <div className="flex h-[calc(100vh-120px)] ">
+            <div className="md:w-2/5 lg:w-1/4 w-0 border-r border-gray-200">
               <ChatLeft 
                 chatRooms={chatRooms}
                 selectedUser={selectedUser}
                 currentUserId={currentUserId}
                 backendUrl={backendUrl}
+                setSelectedUser={setSelectedUser}
+                userId={userId}
+                setUserId={setUserId}
+                setCurrentOpenChatRoom={setCurrentOpenChatRoom}
+
               />
             </div>
             
-            <div className="w-3/4">
+            <div className="md:w-3/4 w-full">
               {selectedUser ? (
                 <ChatRight 
+                  connectionUrl={connectionUrl}
+                  wsProtocol={wsProtocol}
+                  username={username}
                   selectedUser={selectedUser} 
                   isWebSocketConnected={isWebSocketConnected}
                   wsRef={privateMessageWsRef}
                   currentUserId={currentUserId}
                   chatMessages={messages}
                   backendUrl={backendUrl}
+                  userId={userId}
+                  setUserId={setUserId}
                 />
               ) : (
                 <div className="flex justify-center items-center h-full text-gray-500">

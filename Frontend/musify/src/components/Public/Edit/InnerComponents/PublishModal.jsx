@@ -41,7 +41,6 @@ const PublishModal = ({ isOpen, onClose, onPublish, tracks, trackVolumes, userna
       // Step 1: Convert tracks to MP3
       const audioPublishUtils = new AudioPublishUtils();
       const mp3Blob = await audioPublishUtils.convertTracksToMp3(tracks, trackVolumes);
-      console.log('MP3 conversion completed');
   
       // Step 2: Upload to Cloudinary
       const cloudinaryUtils = new CloudinaryUtils();
@@ -50,7 +49,6 @@ const PublishModal = ({ isOpen, onClose, onPublish, tracks, trackVolumes, userna
         projectName,
         username
       );
-      console.log('Cloudinary upload completed:', cloudinaryResponse);
   
       // Step 3: Save to Database
       const databaseUtils = new DatabaseUtils();
@@ -65,7 +63,6 @@ const PublishModal = ({ isOpen, onClose, onPublish, tracks, trackVolumes, userna
         genre,
         folder
       });
-      console.log('Database upload completed:', databaseResponse);
 
   
       // Call onPublish with all the data
@@ -78,7 +75,6 @@ const PublishModal = ({ isOpen, onClose, onPublish, tracks, trackVolumes, userna
       });
   
     } catch (error) {
-      console.error('Error during publishing:', error);
       
       // If Cloudinary upload succeeded but database save failed,
       // clean up the uploaded file from Cloudinary

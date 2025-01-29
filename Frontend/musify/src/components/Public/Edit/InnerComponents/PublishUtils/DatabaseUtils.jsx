@@ -24,13 +24,13 @@ export class DatabaseUtils {
       });
 
       if (saveResponse.status === 200) {
-        console.log('Project saved successfully to database');
+        // console.log('Project saved successfully to database');
         return saveResponse.data;
       } else {
         throw new Error('Failed to save project to database');
       }
     } catch (error) {
-      console.error('Error saving project to database:', error);
+      // console.error('Error saving project to database:', error);
       throw error;
     }
   }
@@ -42,7 +42,7 @@ export class DatabaseUtils {
       });
       return response.status === 200;
     } catch (error) {
-      console.error('Error deleting from Cloudinary:', error);
+      // console.error('Error deleting from Cloudinary:', error);
       throw error;
     }
   }

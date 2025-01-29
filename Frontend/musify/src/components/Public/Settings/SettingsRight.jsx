@@ -29,7 +29,7 @@ function SettingsRight() {
   };
 
   return (
-    <div className="p-4 ml-20">
+    <div className="p-4 lg:ml-20">
       {renderRightComponent()}
     </div>
   );

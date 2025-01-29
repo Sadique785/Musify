@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status, generics, permissions
 from .serializers import UploadSerializer, MediaSerializer, ContentSerializer, LibraryMediaSerializer, PostDetailSerializer, ReportedPostViewSerializer, LikeSerializer, CommentSerializer, ReportedPostSerializer
 from posts.models import Upload, ReportedPost, Like, Comment, ContentUser
-from django.db.models import Count, Q, Avg, F, FloatField
+from django.db.models import Count, Q, Avg, F, FloatField, Exists, OuterRef, Prefetch
 from friends_content.models import FriendList, FriendRequest
 from django.shortcuts import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
@@ -85,7 +85,6 @@ class TrendingContentPagination(PageNumberPagination):
     page_size_query_param = 'page_size'
     max_page_size = 100
 
-
 class TrendingContentView(generics.ListAPIView):
     serializer_class = ContentSerializer
     permission_classes = [IsAuthenticated]
@@ -94,23 +93,28 @@ class TrendingContentView(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
         
-        blocked_users_ids = user.blocked_users.values_list('id', flat=True)
-        users_that_blocked_me_ids = ContentUser.objects.filter(blocked_users=user).values_list('id', flat=True)
+        # Get blocked users
+        blocked_users = user.blocked_users.all()
+        users_that_blocked_me = ContentUser.objects.filter(blocked_users=user)
 
         queryset = Upload.objects.annotate(
-            likes_count=Count('liked_by')
+            likes_count=Count('liked_by'),
+            comments_count=Count('comments'),
+            shares_count=Count('shares')
+        ).prefetch_related(
+            'liked_by',
+            'user'
         ).filter(
             is_active=True,
-            is_private=False,
-              
+            is_private=False
         ).exclude(
-            user_id__in=blocked_users_ids
+            user__in=blocked_users
         ).exclude(
-            user_id__in=users_that_blocked_me_ids
+            user__in=users_that_blocked_me
         ).order_by('-likes_count', '-created_at')
 
         return queryset
-    
+
     def get_serializer_context(self):
         return {'request': self.request}
     

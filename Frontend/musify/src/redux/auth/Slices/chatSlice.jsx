@@ -17,21 +17,33 @@ const chatSlice = createSlice({
     lastFetchTime: null,
     isWebSocketConnected: false,
     currentOpenChatRoomId: null,
-    // Use objects instead of Set for processed messages
     processedMessages: {
-      byId: {},  // Store processed message IDs as object keys
-      byRoomTimestamp: {}  // Store last processed timestamp per room
-    }
+      byId: {},  
+      byRoomTimestamp: {}  
+    },
+    userId: null,
+    selectedUser: null,
   },
   reducers: {
+    updateChatRooms: (state, action) => {
+      const newData = action.payload;
+      state.chatRooms = state.chatRooms.filter(
+        chat => chat.room.id !== newData.room.id
+      );
+      state.chatRooms = [newData, ...state.chatRooms]
+    },
+    setSelectedUser: (state, action) => {
+      state.selectedUser = action.payload;
+    },
+    setUserId: (state, action) =>{
+      state.userId = action.payload;
+    }
+    ,
     setInitialChatRooms: (state, action) => {
       state.chatRooms = sortRoomsByLastMessage(action.payload);
       state.loading = false;
       state.error = null;
       state.lastFetchTime = Date.now();
-    },
-    updateChatRooms: (state, action) => {
-      state.chatRooms = sortRoomsByLastMessage(action.payload);
     },
     setWebSocketConnected: (state, action) => {
       state.isWebSocketConnected = action.payload;
@@ -178,6 +190,8 @@ export const {
   setCurrentOpenChatRoom,
   incrementUnreadCount,
   cleanupProcessedMessages,
+  setSelectedUser,
+  setUserId,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

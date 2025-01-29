@@ -89,32 +89,33 @@ class AdminLoginView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class FetchUsers(APIView):
-    permission_classes = [IsAuthenticated]  # Only authenticated users can access this view
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        print("FetchUsers API accessed.")  # Print when the API is accessed
+        print("FetchUsers API accessed.")
         
-        # Fetch all users
         users = CustomUser.objects.filter(is_superuser=False).exclude(id=request.user.id)
-        print(f"Total users fetched: {users.count()}")  # Print the total number of users fetched
+        print(f"Total users fetched: {users.count()}")
 
-        # Serialize the user data
         serialized_users = UserSerializer(users, many=True)
-        print(f"Serialized users data: {serialized_users.data}") 
+        print(f"Serialized users data: {serialized_users.data}")
         
         for user_data in serialized_users.data:
-            user_data['role'] = 'User' # Print serialized data
+            user_data['role'] = 'User'
 
-        # Calculate counts
         total_users = users.count()
         active_users = users.filter(is_active=True).count()
-        print(f"Active users count: {active_users}")  # Print the number of active users
+        print(f"Active users count: {active_users}")
 
-        # Admin's profile image
-        admin_profile_image = request.user.user_profile.image.url if request.user.user_profile and request.user.user_profile.image else None
-        print(f"Admin profile image: {admin_profile_image}")  # Print the admin profile image URL (or None if missing)
+        # Updated to check image_url first
+        admin_profile = request.user.user_profile
+        admin_profile_image = None
+        if admin_profile:
+            admin_profile_image = admin_profile.image_url if admin_profile.image_url else (
+                admin_profile.image.url if admin_profile.image else None
+            )
+        print(f"Admin profile image: {admin_profile_image}")
 
-        # Response structure
         data = {
             "admin_profile_image": admin_profile_image,
             "total_users": total_users,
@@ -122,31 +123,33 @@ class FetchUsers(APIView):
             "users": serialized_users.data,
         }
 
-        print("Response data prepared.")  # Indicate that the response data is ready
-        
+        print("Response data prepared.")
         return Response(data)
+        
     
 
 
 class FetchAdminProfileImage(APIView):
     permission_classes = [IsAuthenticated]
 
-
     def get(self, request):
-        
         try:
             profile = request.user.user_profile
-            admin_profile_image = profile.image.url if profile.image else None
+            # First try to get image_url, if not found fall back to image.url
+            profile_image = profile.image_url if profile.image_url else profile.image.url
 
-            if admin_profile_image:
-                return Response({"profileImage":admin_profile_image}, status=status.HTTP_200_OK)
+            if profile_image:
+                return Response({"profileImage": profile_image}, status=status.HTTP_200_OK)
             else:
-                return Response({"profileImage":None}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"profileImage": None}, status=status.HTTP_404_NOT_FOUND)
             
         except Profile.DoesNotExist:
+            return Response(
+                {"error": "Profile does not exist for this user."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
 
-            return Response({"error": "Profile does not exist for this user."}, status=status.HTTP_404_NOT_FOUND)
-                
 class FetchUserDetails(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request, id):
@@ -158,7 +161,12 @@ class FetchUserDetails(APIView):
             print('user here',user)
             profile = get_object_or_404(Profile, user=user)
             print(profile)
-            admin_profile_image = request.user.user_profile.image.url if request.user.user_profile and request.user.user_profile.image else None
+            admin_profile = request.user.user_profile
+            admin_profile_image = None
+            if admin_profile:
+                admin_profile_image = admin_profile.image_url if admin_profile.image_url else (
+                    admin_profile.image.url if admin_profile.image else None
+                )
 
 
 
@@ -176,8 +184,8 @@ class FetchUserDetails(APIView):
                 "blocked_users_count": profile.blocked_users.count(),
                 "talents": [talent.name for talent in profile.talents.all()],
                 "genres": [genre.name for genre in profile.genres.all()],
-                "userImage":profile.image.url,
-                'admin_profile_image':admin_profile_image,
+                "userImage": profile.image_url if profile.image_url else profile.image.url,
+                'admin_profile_image': admin_profile_image,
             }
 
             return Response(user_data, status=status.HTTP_200_OK)

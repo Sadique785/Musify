@@ -1,23 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import axiosInstance from '../../../../axios/authInterceptor';
 import { FaUserAlt } from 'react-icons/fa';
+import { getBackendUrl } from '../../../../services/config';
 
 function RightPrivacy() {
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [loading, setLoading] = useState(true); 
   const [loadingUser, setLoadingUser] = useState(null); 
-
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const backendUrl = getBackendUrl();
 
   const fetchBlockedUsers = async () => {
     setLoading(true); // Set loading to true before fetching
     try {
       const response = await axiosInstance.get('/friends/blocked-users/');
-      console.log('Response here', response);
       
       setBlockedUsers(response.data.blocked_users || []);
     } catch (error) {
-      console.error('Error fetching blocked users:', error);
       setBlockedUsers([]);
     } finally {
       setLoading(false); // Set loading to false after fetch
@@ -45,7 +43,7 @@ function RightPrivacy() {
   
 
   return (
-    <div className="w-2/3 p-6">
+    <div className="w-full lg:w-2/3 p-6">
       <h2 className="text-2xl font-bold mb-4">Blocked Accounts</h2>
       <p className="text-gray-600 mb-6">
         The blocked users are no longer able to follow, message, or comment on your posts.

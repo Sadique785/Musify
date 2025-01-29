@@ -40,7 +40,7 @@ function FollowButton({ userId,postId, followStatus, updateFollowStatus , isSame
             }
         } catch (error) {
             toast.error(error?.response?.data?.message);
-            console.error('Error following/unfollowing user:', error);
+            // console.error('Error following/unfollowing user:', error);
         }
     };
 

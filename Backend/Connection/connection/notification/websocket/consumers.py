@@ -3,6 +3,7 @@ import json
 from django.contrib.auth import get_user_model
 from channels.db import database_sync_to_async
 from ..models import Notification
+from channels.exceptions import StopConsumer
 
 User = get_user_model()
 
@@ -37,6 +38,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             self.user_group_name,
             self.channel_name
         )
+
+        raise StopConsumer()
 
 
     @database_sync_to_async

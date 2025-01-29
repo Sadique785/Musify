@@ -28,11 +28,9 @@ function ReportModal({ isOpen, onClose, userEmail, postId }) {
             };
 
             const response = await axiosInstance.post('/content/report-post/', payload);
-            console.log('Report submitted successfully:', response.data);
             toast.success('Report submitted successfully');
             handleClose();
         } catch (error) {
-            console.error("Error submitting report:", error);
             toast.error('Error submitting report');
         }
     };

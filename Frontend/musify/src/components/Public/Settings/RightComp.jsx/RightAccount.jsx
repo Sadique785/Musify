@@ -79,7 +79,7 @@ function RightAccount() {
     !errors.newEmail;
 
   return (
-    <div className="w-2/3 p-6">
+    <div className="w-full  lg:w-2/3 p-6">
       <h2 className="text-2xl font-bold mb-6">ACCOUNT SETTINGS</h2>
 
       {/* Email Section */}

@@ -9,7 +9,6 @@ import { persistor } from '../redux/auth/userStore';
 // Function to decode a JWT token
 export const decodeToken = (token) => {
     try {
-        console.log(token);
         
         return jwtDecode(token);
     } catch (error) {
@@ -31,7 +30,6 @@ export const isTokenExpired = (token) => {
 
 export const refreshAccessToken = async (refreshToken) => {
     if (!refreshToken || isTokenExpired(refreshToken)) {
-        console.error('Refresh token is invalid or expired.');
         return null;
     }
 

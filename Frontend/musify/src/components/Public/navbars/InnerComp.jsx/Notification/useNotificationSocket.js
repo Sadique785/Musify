@@ -1,11 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNotifications } from './NotificationManager';
+import { getConfig } from '../../../../../config';
+
 
 const useNotificationSocket = (userId) => {
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [socket, setSocket] = useState(null);
   const { addNotification } = useNotifications();
+  const { connectionUrl } = getConfig();
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'wss:';
+  const wsUrl = `${wsProtocol}//${connectionUrl}/ws/notifications/${userId}/`;
+
+
 
   useEffect(() => {
     if (!userId) {
@@ -13,12 +20,11 @@ const useNotificationSocket = (userId) => {
       return;
     }
 
-    const newSocket = new WebSocket(`ws://localhost:8003/ws/notifications/${userId}/`);
+    const newSocket = new WebSocket(wsUrl);
     
-    newSocket.onopen = () => console.log('WebSocket connection established');
+    newSocket.onopen = () => console.log('Notification connection established');
     newSocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.log('notification_data', data);
 
       // Handle existing notifications
       if (data.type === 'existing_notification') {
@@ -49,11 +55,9 @@ const useNotificationSocket = (userId) => {
     };
 
     newSocket.onerror = (error) => {
-      console.error('WebSocket Error:', error);
       setIsLoading(false);
     };
     newSocket.onclose = () => {
-      console.log('WebSocket connection closed');
       setIsLoading(false);
     };
 

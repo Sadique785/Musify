@@ -40,12 +40,9 @@ export async function initDB() {
 }
 
 export const saveAudioFile = async (trackId, audioData, isSegment = false, segmentIndex = null) => {
-  console.log('Entered saveAudioFile function');
-  console.log(`Received Parameters - trackId: ${trackId}, isSegment: ${isSegment}, segmentIndex: ${segmentIndex}`);
-  
+
   try {
     const db = await initDB();
-    console.log('Database initialized successfully');
     
     const transaction = db.transaction(AUDIO_STORE, 'readwrite');
     const store = transaction.objectStore(AUDIO_STORE);
@@ -66,17 +63,14 @@ export const saveAudioFile = async (trackId, audioData, isSegment = false, segme
     // Log the record (excluding audio data)
     const logRecord = { ...audioRecord };
     delete logRecord.audioData;
-    console.log('Audio record to be saved:', logRecord);
     
     // Use add instead of put for new records
     const result = await store.add(audioRecord);
-    console.log(`Audio file saved successfully with result:`, result);
     
     await transaction.done;
     return recordId;
     
   } catch (error) {
-    console.error('Error saving audio file:', error);
     console.error('Error details:', {
       name: error.name,
       message: error.message,
@@ -97,13 +91,11 @@ export const getAudioFile = async (trackId, isSegment = false, segmentIndex = nu
     const result = await index.get(key);
     
     if (!result) {
-      console.log(`No audio file found for key: ${key}`);
       return null;
     }
     
     return result.audioData;
   } catch (error) {
-    console.error('Error getting audio file:', error);
     throw error;
   }
 };
@@ -122,7 +114,6 @@ export const deleteAudioFile = async (trackId, isSegment = false, segmentIndex =
     if (cursor) {
       // Delete using the primary key
       await store.delete(cursor.primaryKey);
-      console.log(`Audio file deleted successfully with key: ${key}`);
     }
     
     await transaction.done;

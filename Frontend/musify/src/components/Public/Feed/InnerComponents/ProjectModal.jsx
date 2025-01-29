@@ -9,18 +9,15 @@ function ProjectModal({ isOpen, onClose, modalRef }) {
     if (!isOpen) return null;
 
     const handleClose = () => {
-        console.log("Modal Close button clicked");
         onClose();
     };
 
     const handleNewProject = (e) => {
         e.preventDefault();
-        console.log("Upload Karaoke clicked - navigation starting");
 
         navigate('/edit');
     }
 
-    console.log("ProjectModal component rendered with isOpen =", isOpen);
 
     return (
         <div ref={modalRef} className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">

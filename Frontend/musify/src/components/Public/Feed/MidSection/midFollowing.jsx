@@ -11,7 +11,7 @@ import axios from 'axios';
 import PostDetailModal from '../InnerComponents/PostDetailModal';
 import PostCardLoader from '../../../../pages/Admin/Loaders/PostCardLoader';
 import FeedEmptyState from '../../Profile/InnerComponents/FeedEmptyState';
-
+import { getBackendUrl } from '../../../../services/config';
 
 
 function MidFollowing() {
@@ -22,7 +22,7 @@ function MidFollowing() {
   const { profile } = useContext(ProfileContext);
   const [shouldRefresh, setShouldRefresh] = useState(false)
   const { imageUrl } = profile;
-  const gatewayUrl = import.meta.env.VITE_BACKEND_URL
+  const gatewayUrl = getBackendUrl();
   const [followStatus, setFollowStatus] = useState({}); 
   const [currentPage, setCurrentPage] = useState(1); // Start with page 1
   const [hasMore, setHasMore] = useState(true);
@@ -64,7 +64,6 @@ function MidFollowing() {
 
       try {
         const response = await axiosInstance.get(`/content/following-posts/?page=${page}`);
-        console.log("Fetched posts:", response.data);
         if (response.data.results.length === 0) {
           setHasMore(false);
           if (isInitial) {
@@ -89,7 +88,6 @@ function MidFollowing() {
           setHasMore(false);
         } else {
           setError("Failed to load trending posts. Please try again later.");
-          console.error('Error fetching trending posts:', error);
         }
       } finally {
         setLoading(false);
@@ -254,7 +252,6 @@ function MidFollowing() {
             toast.error(`Failed to upload ${fileType}.`);
           }
         } catch (error) {
-          console.error(`Error uploading ${fileType}:`, error);
           toast.error(`Error uploading ${fileType}.`);
     
           // Delete the file from Cloudinary if an error occurs after upload
@@ -263,7 +260,6 @@ function MidFollowing() {
           }
         }
       } catch (error) {
-        console.error('Error during file save:', error);
         toast.error('Something went wrong while saving the file.');
       } finally {
         setIsVerifying(false);

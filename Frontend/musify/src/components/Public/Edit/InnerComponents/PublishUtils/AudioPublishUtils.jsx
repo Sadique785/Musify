@@ -14,7 +14,7 @@ export class AudioPublishUtils {
     }
   
     async convertTracksToMp3(tracks, trackVolumes) {
-      console.log('AudioPublishUtils: Starting conversion to MP3...');
+      // console.log('AudioPublishUtils: Starting conversion to MP3...');
   
       // Calculate the maximum duration of the composition
       let maxEndPosition = 0;

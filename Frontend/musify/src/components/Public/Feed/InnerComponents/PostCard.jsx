@@ -10,6 +10,7 @@ import { handleCommentSubmit } from '../../../compUtils/commentUtils';
 import PostCardDropdown from './PostCardDropdown';
 import FollowButton from './FollowButton';
 import { Link } from 'react-router-dom';
+import { getBackendUrl } from '../../../../services/config';
 
 
 function PostCard({ post, imageUrl, onPostClick, followStatus, updateFollowStatus }) {
@@ -22,7 +23,9 @@ function PostCard({ post, imageUrl, onPostClick, followStatus, updateFollowStatu
     const [comments, setComments] = useState([]);  // New state for comments
     const [commentCount, setCommentCount] = useState(commentsCount);  // For tracking comment count
     const [recentLikes, setRecentLikes] = useState(recent_likes)
-    const gatewayUrl = import.meta.env.VITE_BACKEND_URL;
+    // const gatewayUrl = import.meta.env.VITE_BACKEND_URL;
+    const gatewayUrl = getBackendUrl();
+
     const videoRef = useRef(null);
     const dropdownRef = useRef(null)
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -272,7 +275,7 @@ function PostCard({ post, imageUrl, onPostClick, followStatus, updateFollowStatu
                 <div className="flex-shrink-0">
                     {imageUrl ? (
                         <img
-                            src={`${gatewayUrl}${imageUrl}`}
+                            src={`${imageUrl}`}
                             alt="User"
                             className="w-8 h-8 rounded-full"
                         />

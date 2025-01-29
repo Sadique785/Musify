@@ -1,4 +1,5 @@
-import React from 'react'
+import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Mastering = () => {
   return (
@@ -29,9 +30,11 @@ const Mastering = () => {
             Engage with fans and fellow artists, and take your music to new heights.
           </p>
       
+          <Link to={'/login'}>
           <button className='btn-size font-mulish bg-[#731C1B] text-white font-semibold px-6 py-3 rounded-full hover:bg-opacity-90 transition mt-8'> 
             Let's Get Started
           </button>
+          </Link>
         </div>
         <div className='w-full md:w-1/2 flex justify-center items-center mt-6 ml-[100px] md:mt-0'> 
   {/* Add items-center to vertically center the image within the container */}

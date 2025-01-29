@@ -38,7 +38,6 @@ const RightNotification = () => {
       setIsEnabled(response.data.enabled);
     } catch (error) {
       setIsEnabled(previousState); // Revert on error
-      console.error("Error toggling notification:", error);
     }
   };
 

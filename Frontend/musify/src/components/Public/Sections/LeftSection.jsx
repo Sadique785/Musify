@@ -13,7 +13,7 @@ function LeftSection({ type }) {
 
 
   return (
-    <div className='w-1/4  p-4 feed-container  text-black'>
+    <div className='hidden sm:block sm:w-1/3 lg:w-1/4 p-4 feed-container text-black'>
 
       {isFeedPage && <FeedLeft />}
       {isLibPage && <LibLeft />}

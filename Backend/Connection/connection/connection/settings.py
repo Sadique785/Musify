@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
+
 from pathlib import Path
 
 from decouple import config
@@ -27,11 +29,9 @@ SECRET_KEY = config('SECRET_KEY')
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default='True', cast=bool)
 
-ALLOWED_HOSTS = []
-
-
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
 
 
 # Application definition
@@ -86,15 +86,21 @@ TEMPLATES = [
 WSGI_APPLICATION = 'connection.wsgi.application'
 ASGI_APPLICATION = 'connection.asgi.application'
 
+
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [('localhost', 6379)],
+            'hosts': [
+                (config('REDIS_HOST', default='localhost'), 
+                 config('REDIS_PORT', default=6379, cast=int))
+            ],
         },
     },
 }
 
+
+ASGI_APPLICATION_TIMEOUT = 30 
 
 
 # Database
@@ -138,16 +144,21 @@ SESSION_COOKIE_SECURE = False  # Should be True if using HTTPS
 SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access
 SESSION_COOKIE_SAMESITE = 'Lax'
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:8000",  # Gateway URL
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",
+#     "http://localhost:5173",
+#     "http://localhost:8000",  # Gateway URL
+# ]
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='').split(',')
 
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5173',  # Frontend
-    'http://localhost:8000',  # Gateway
-]
+
+# CSRF_TRUSTED_ORIGINS = [
+#     'http://localhost:5173',  # Frontend
+#     'http://localhost:8000',  # Gateway
+# ]
+
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='').split(',')
+
 
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_COOKIE_SECURE = False  # Set to True in production
@@ -249,3 +260,44 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+KAFKA_CONFIG = {
+    'bootstrap.servers': config('KAFKA_BOOTSTRAP_SERVERS', default='localhost:9092'),
+    'client.id': 'connection_service',
+    'error_cb': lambda err: print(f'Kafka error: {err}'),
+    'group.id': config('KAFKA_GROUP_ID', default='connection-consumer-group'),
+    'auto.offset.reset': config('KAFKA_AUTO_OFFSET_RESET', default='earliest'),
+}
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'websocket_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'websocket.log',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'loggers': {
+        'websocket': {
+            'handlers': ['websocket_file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}

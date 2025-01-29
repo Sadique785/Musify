@@ -47,8 +47,8 @@ class CustomUserManager(BaseUserManager):
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     id = models.AutoField(primary_key=True)
-    username = models.CharField(max_length=255, unique=True)
-    email = models.EmailField(max_length=255, unique=True)
+    username = models.CharField(max_length=255, unique=True, db_index=True)
+    email = models.EmailField(max_length=255, unique=True, db_index=True)
     password = models.CharField(max_length=128)  # Storing hashed password
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -125,7 +125,7 @@ class Genre(models.Model):
 
 
 class Profile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='user_profile', to_field='id')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='user_profile', to_field='id', db_index=True)
     name = models.CharField(max_length=255, default='your name')
     location = models.CharField(max_length=255, default='city')
     is_online = models.BooleanField(default=False)
@@ -135,6 +135,7 @@ class Profile(models.Model):
     bio = models.CharField(default='', blank=True, null=True, max_length=350)
     date_of_birth = models.CharField(blank=True, max_length=150)
     image = models.ImageField(default='profile_pics/default.png', upload_to='profile_pics', blank=True, null=True)
+    image_url = models.URLField(max_length=500, blank=True, null=True)  
     gender = models.CharField(max_length=50, blank=True)
     talents = models.ManyToManyField(Talent, related_name='profiles_with_talent', blank=True)
     genres = models.ManyToManyField(Genre, related_name='profiles_with_genre', blank=True)
@@ -147,6 +148,14 @@ class Profile(models.Model):
     
     def __str__(self):
         return f'{self.user.username} Profile' 
+    
+    def get_image_url(self):
+        """Return the appropriate image URL"""
+        if self.image_url:
+            return self.image_url
+        elif self.image:
+            return self.image.url
+        return 'profile_pics/default.png'
 
 
 class Relationship(models.Model):

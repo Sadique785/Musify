@@ -7,10 +7,10 @@ self.addEventListener('message', async (e) => {
   
   if (type === 'convert') {
     try {
-      console.log('[Worker] Starting FFmpeg conversion');
+      // console.log('[Worker] Starting FFmpeg conversion');
       const ffmpeg = new FFmpeg();
       
-      console.log('[Worker] Loading FFmpeg');
+      // console.log('[Worker] Loading FFmpeg');
       
       // Load FFmpeg with proper core URLs
       await ffmpeg.load({
@@ -21,16 +21,16 @@ self.addEventListener('message', async (e) => {
         wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.4/dist/ffmpeg-core.wasm'
       });
       
-      console.log('[Worker] Writing input file');
+      // console.log('[Worker] Writing input file');
       await ffmpeg.writeFile('input.wav', data);
       
-      console.log('[Worker] Starting conversion');
+      // console.log('[Worker] Starting conversion');
       await ffmpeg.exec(['-i', 'input.wav', '-b:a', '192k', 'output.mp3']);
       
-      console.log('[Worker] Reading output file');
+      // console.log('[Worker] Reading output file');
       const output = await ffmpeg.readFile('output.mp3');
       
-      console.log('[Worker] Conversion complete');
+      // console.log('[Worker] Conversion complete');
       self.postMessage({ type: 'done', data: output });
     } catch (error) {
       console.error('[Worker] Error:', error);

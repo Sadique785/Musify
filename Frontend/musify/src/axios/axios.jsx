@@ -1,10 +1,16 @@
 import axios from "axios";
 import Cookies from 'js-cookie'
 import { store } from "../redux/auth/userStore";
+import { getConfig } from "../config";
+import { getBackendUrl } from "../services/config";
 
 
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
+// const backendUrl = import.meta.env.VITE_BACKEND_URL;
+// const { backendUrl } = getConfig();
+const backendUrl = getBackendUrl();
+
+
 const axiosInstance = axios.create({
     baseURL: `${backendUrl}`,
     withCredentials: true
@@ -24,21 +30,21 @@ axiosInstance.interceptors.request.use(
 
         // Correct the case of the CSRF token header
         if (csrfToken) {
-            console.log('CSRF token:', csrfToken);
+            // console.log('CSRF token:', csrfToken);
             config.headers['X-CSRFToken'] = csrfToken;  // Correct header for CSRF
         } else {
-            console.warn('CSRF token missing!');
+            // console.warn('CSRF token missing!');
         }
 
         if (accessToken) {
-            console.log('Access token:', accessToken);
+            // console.log('Access token:', accessToken);
             config.headers['Authorization'] = `Bearer ${accessToken}`;
         } else {
-            console.warn('Access token missing!');
+            // console.warn('Access token missing!');
         }
 
         if (refreshToken) {
-            console.log('Refresh token:', refreshToken);
+            // console.log('Refresh token:', refreshToken);
             config.headers['X-Refresh-Token'] = refreshToken;
         }
 

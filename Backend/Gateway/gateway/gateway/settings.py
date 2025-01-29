@@ -9,9 +9,12 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,12 +23,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-3b4i4!p3a3i$zi==u)$a9rf(i+aiv@&ni*7a1ean-*x85nz&hn'
+# SECRET_KEY = 'django-insecure-3b4i4!p3a3i$zi==u)$a9rf(i+aiv@&ni*7a1ean-*x85nz&hn'
+
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-3b4i4!p3a3i$zi==u)$a9rf(i+aiv@&ni*7a1ean-*x85nz&hn')
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+# POD_IP = os.getenv('POD_IP', '')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+# if POD_IP:
+#     ALLOWED_HOSTS.append(POD_IP)
+
+# ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+# ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+# print("ALLOWED_HOSTS", ALLOWED_HOSTS)
+
 
 
 
@@ -70,19 +85,24 @@ MIDDLEWARE = [
 # }
 
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Frontend
-    "http://localhost:5173",  # Frontend
-    "http://localhost:8001",  # Auth service (backend)
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",  # Frontend
+#     "http://localhost:5173",  # Frontend
+#     "http://localhost:8001",  # Auth service (backend)
+# ]
 
 
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5173',  # Frontend
-    'http://localhost:8001',  # Auth service (backend)
-]
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
 
-CSRF_COOKIE_NAME = 'csrftoken'
+# CSRF_TRUSTED_ORIGINS = [
+#     'http://localhost:5173',  # Frontend
+#     'http://localhost:8001',  # Auth service (backend)
+# ]
+
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
+
+# CSRF_COOKIE_NAME = 'csrftoken'
+CSRF_COOKIE_NAME = os.getenv('CSRF_COOKIE_NAME', 'csrftoken')
 CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
 
 CSRF_COOKIE_HTTPONLY = True  # Optional, adds security
@@ -92,7 +112,8 @@ CSRF_USE_SESSIONS = True  # Store CSRF token in the session (if required)
 CSRF_COOKIE_HTTPONLY = False  # If True, it will not be accessible to JavaScript
 CSRF_COOKIE_SAMESITE = 'Lax' 
 
-SESSION_COOKIE_NAME = 'sessionid'  # Default name for the session cookie
+# SESSION_COOKIE_NAME = 'sessionid'  # Default name for the session cookie
+SESSION_COOKIE_NAME = os.getenv('SESSION_COOKIE_NAME', 'sessionid')
 SESSION_COOKIE_DOMAIN = None  # Domain for which the cookie is valid
 SESSION_COOKIE_PATH = '/'  # Path for which the cookie is valid
 SESSION_COOKIE_SECURE = False  # Should be True if using HTTPS
@@ -145,13 +166,20 @@ WSGI_APPLICATION = 'gateway.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': '/app/db/db.sqlite3',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -193,3 +221,25 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+    'loggers': {
+        'gateway_app': {  # replace with your app name
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    }
+}

@@ -1,5 +1,5 @@
 import React, { memo, useState, useCallback } from 'react';
-import MediaPreview from './MediaPreview'; // Import the MediaPreview component
+import MediaPreview from './MediaPreview';
 import getCroppedImg from '../compUtils/cropImage';
 import { FaRegSmile } from 'react-icons/fa';
 import EmojiPicker from 'emoji-picker-react';
@@ -41,10 +41,97 @@ const FilePreviewModal = memo(function FilePreviewModal({
     <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
       <div className="bg-white p-6 rounded-lg shadow-2xl w-3/4 max-w-lg max-h-[90vh] overflow-y-auto border border-gray-300">
         {isVerifying && (
-          <div className="absolute inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center z-50">
-            <span className="text-white mb-2">Preparing for upload...</span>
-            <progress value={uploadProgress} max="100" className="w-1/2">{uploadProgress}%</progress>
-            <p className="text-white mt-2">{uploadProgress}%</p>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl w-80 p-6 shadow-xl">
+              {/* Main Progress Circle */}
+              <div className="flex justify-center mb-8">
+                <div className="relative w-32 h-32">
+                  <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
+                    <circle
+                      className="text-gray-200"
+                      strokeWidth="4"
+                      stroke="currentColor"
+                      fill="none"
+                      r="46"
+                      cx="50"
+                      cy="50"
+                    />
+                    <circle
+                      className="text-blue-500 transition-all duration-500 ease-in-out"
+                      strokeWidth="4"
+                      strokeLinecap="round"
+                      stroke="currentColor"
+                      fill="none"
+                      r="46"
+                      cx="50"
+                      cy="50"
+                      strokeDasharray="289"
+                      strokeDashoffset={289 - (uploadProgress / 100) * 289}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-3xl font-bold text-blue-500">
+                      {Math.round(uploadProgress)}%
+                    </span>
+                    <span className="text-sm text-gray-500">Uploading...</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Steps */}
+              <div className="space-y-4">
+                {['Verifying', 'Processing', 'Saving'].map((step, index) => (
+                  <div key={step} className="relative">
+                    {index < 2 && (
+                      <div className="absolute left-4 ml-[3px] top-7 w-[2px] h-6">
+                        <div
+                          className={`w-full h-full transition-colors duration-300 ${
+                            uploadProgress > (index + 1) * 33 ? 'bg-blue-500' : 'bg-gray-200'
+                          }`}
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-center space-x-3">
+                      <div 
+                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center
+                        ${uploadProgress > (index + 1) * 33 ? 'border-blue-500 bg-blue-50' : 
+                          uploadProgress > index * 33 ? 'border-blue-500 animate-pulse' : 'border-gray-200'}`}
+                      >
+                        {uploadProgress > (index + 1) * 33 ? (
+                          <svg 
+                            className="w-5 h-5 text-blue-500" 
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                          >
+                            <path 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round" 
+                              strokeWidth={2} 
+                              d="M5 13l4 4L19 7" 
+                            />
+                          </svg>
+                        ) : (
+                          <div 
+                            className={`w-2 h-2 rounded-full 
+                            ${uploadProgress > index * 33 ? 'bg-blue-500' : 'bg-gray-200'}`}
+                          />
+                        )}
+                      </div>
+                      <span 
+                        className={`text-sm font-medium
+                        ${uploadProgress > index * 33 ? 'text-gray-900' : 'text-gray-400'}`}
+                      >
+                        {step}
+                        {uploadProgress > index * 33 && uploadProgress <= (index + 1) * 33 && (
+                          <span className="animate-pulse">...</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -59,7 +146,6 @@ const FilePreviewModal = memo(function FilePreviewModal({
             onZoomChange={setZoom}
             onCropComplete={onCropComplete}
           />
-          {/* Zoom control, only for images */}
           {file && file.type.startsWith('image/') && (
             <div className="mt-2 text-center w-full">
               <input

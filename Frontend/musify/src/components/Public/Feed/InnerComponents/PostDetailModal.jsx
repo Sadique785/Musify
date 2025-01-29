@@ -11,6 +11,8 @@ import CommentSection from './CommentSection';
 import ReportModal from './ReportModal';
 import { ProfileContext } from '../../../../context/ProfileContext';
 import BlockConfirmationModal from './BlockConfirmationModal';
+import { getBackendUrl } from '../../../../services/config';
+
 
 function PostDetailModal({ post, onClose, setShouldRefresh, shouldRefresh }) {
   const [postDetails, setPostDetails] = useState(null);
@@ -23,7 +25,8 @@ function PostDetailModal({ post, onClose, setShouldRefresh, shouldRefresh }) {
   const [currentLikesCount, setCurrentLikesCount] = useState(post.likes_count);
   const [comments, setComments] = useState([]);
   const [commentCount, setCommentCount] = useState(post.comments_count); 
-  const gatewayUrl = import.meta.env.VITE_BACKEND_URL;
+  const gatewayUrl = getBackendUrl();
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [isFollowed, setIsFollowed] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false); 
@@ -56,10 +59,8 @@ function PostDetailModal({ post, onClose, setShouldRefresh, shouldRefresh }) {
   useEffect(() => {
     const fetchPostDetails = async () => {
         setLoading(true);
-        console.log('Fetching post details for ID:', post.id);
         try {
             const response = await axiosInstance.get(`/content/post-detail/${post.id}/`);
-            console.log('Detailed Response:', response.data);
             setPostDetails(response.data);
             setComments(response.data.comments)
             setIsLiked(response.data.is_liked); 
@@ -68,7 +69,6 @@ function PostDetailModal({ post, onClose, setShouldRefresh, shouldRefresh }) {
             console.error('Error fetching post details:', error);
         } finally {
             setLoading(false);
-            console.log('Loading finished for post ID:', post.id);
         }
     };
 

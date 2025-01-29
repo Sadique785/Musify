@@ -18,7 +18,7 @@ function BlockConfirmationModal({ userId, username, isOpen, onClose, onBlockConf
             
             toast.error('Error blocking user');
 
-            console.error('Error blocking user:', error);
+            // console.error('Error blocking user:', error);
         }
     };
 

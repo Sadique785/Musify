@@ -5,40 +5,111 @@ import ChatMessages from './ChatMessages';
 import ChatInput from './ChatInput';
 
 
-const ChatRight = ({ selectedUser, chatMessages, currentUserId, wsRef, backendUrl }) => {
+const ChatRight = ({ selectedUser, chatMessages, currentUserId,username, wsRef, backendUrl,userId, setUserId, connectionUrl, wsProtocol }) => {
   const navigate = useNavigate();
   const [messages, setMessages] = useState(chatMessages);
   const [newMessage, setNewMessage] = useState('');
+  const senderId = currentUserId
+  const receiverId = userId
+  const receiverName = selectedUser.username
+  const [chatLoading, setChatLoading] = useState(true)
+
+  const room_array = [senderId, receiverId];
+  room_array.sort((a,b) => a-b);
+
+  const roomName = `chat_${room_array[0]}-${room_array[1]}`
+  // console.log(roomName)
+
+  useEffect(() => {
+    setMessages([]);
+    setChatLoading(true)
+  }, [selectedUser])
 
   useEffect(() => {
     setMessages(chatMessages);
   }, [chatMessages]);
 
 
+
+  const connectPrivateMessageWebSocket = async (otherUserId) => {
+    setChatLoading(true);
+
+    
+    // First, close existing connection if any
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+      setMessages([]);
+      // Wait for the connection to fully close
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    if (userId) {
+      const wsPrivateChatUrl = `${wsProtocol}//${connectionUrl}/ws/chat/${roomName}/`;
+      const ws = new WebSocket(wsPrivateChatUrl);
+
+      ws.onopen = () => {
+        console.log('Private message WebSocket connected for user:', otherUserId);
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        // console.log('message', data)
+        setMessages((prev) => [...prev, data]);
+        setChatLoading(false);
+
+        
+      };
+
+      ws.onclose = () => {
+        // console.log('Private message WebSocket disconnected');
+        setMessages([]);
+        setChatLoading(true);
+      };
+
+      ws.onerror = (error) => {
+        // console.error('Private message WebSocket error:', error);
+        ws.close();
+      };
+
+      wsRef.current = ws;
+    }
+  };
+
+
+
+  useEffect(() => {
+    // console.log('Entered the Useeffect')
+    connectPrivateMessageWebSocket(userId);
+
+
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+        setMessages([]);
+      }
+    };
+  }, [userId, currentUserId]);
+
+
   const handleProfileClick = () => {
     navigate(`/profile/${selectedUser.username}`);
+    
   };
 
 
   const handleSendMessage = () => {
     if (newMessage.trim() && wsRef.current) {
-      wsRef.current.send(JSON.stringify({
-        type: 'message',
-        message: newMessage  // Direct content, not nested object
-      }));
-      
-      // Optimistic UI update
-      setMessages(prevMessages => [
-        ...prevMessages, 
-        {
-          id: Date.now(),
-          content: newMessage,
-          sender_id: currentUserId,
-          timestamp: new Date().toISOString(),
-          is_read: false
-        }
-      ]);
-      
+      const message=newMessage
+      const payload = {
+        message: newMessage,
+        senderName: username,
+        senderId: senderId,
+        receiverId: receiverId,
+        recieverName: receiverName,
+      };
+    wsRef.current.send(JSON.stringify(payload));
       setNewMessage('');
     }
   };
@@ -54,7 +125,7 @@ const ChatRight = ({ selectedUser, chatMessages, currentUserId, wsRef, backendUr
       </div>
       
       <div className="flex-grow overflow-y-auto scrollbar-hidden">
-        <ChatMessages messages={messages} currentUserId={currentUserId} />
+        <ChatMessages messages={messages} currentUserId={currentUserId} chatLoading={chatLoading} />
       </div>
       
       <div className="sticky bottom-0 z-10">

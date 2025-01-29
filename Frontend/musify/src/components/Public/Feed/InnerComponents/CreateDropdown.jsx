@@ -25,7 +25,7 @@ function CreateDropdown({ isOpen, onClose }){
         modalRef.current &&
         !modalRef.current.contains(event.target)
       ) {
-        console.log("Outside click detected, closing dropdown and modal");
+        // console.log("Outside click detected, closing dropdown and modal");
         onClose();
         setShowModal(false);
       }
@@ -43,12 +43,12 @@ function CreateDropdown({ isOpen, onClose }){
 
 
   const handleNewProjectClick = () => {
-    console.log("New Project clicked in dropdown, opening modal");
+    // console.log("New Project clicked in dropdown, opening modal");
     setShowModal(true);
 };
 
 const handleModalClose = () => {
-    console.log("Modal close detected, closing modal and dropdown");
+    // console.log("Modal close detected, closing modal and dropdown");
     setShowModal(false);
     onClose();
 };

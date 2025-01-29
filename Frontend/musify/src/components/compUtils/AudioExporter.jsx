@@ -13,7 +13,7 @@ export class AudioExporter {
   }
 
   async exportTracks(tracks, trackVolumes, format = 'wav') {
-    console.log(`AudioExporter: Starting ${format} export...`);
+    // console.log(`AudioExporter: Starting ${format} export...`);
 
     let maxEndPosition = 0;
     tracks.forEach(track => {

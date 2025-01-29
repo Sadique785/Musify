@@ -23,6 +23,8 @@ import {
   setPaginationLoading,
   prependNewPosts,
 } from '../../../../redux/auth/Slices/feedPostsSlice';
+import { getBackendUrl } from '../../../../services/config';
+import { getConfig } from '../../../../config';
 
 
 
@@ -45,7 +47,10 @@ function MidTrending() {
   const { profile } = useContext(ProfileContext);
   const [shouldRefresh, setShouldRefresh] = useState(false)
   const { imageUrl } = profile;
-  const gatewayUrl = import.meta.env.VITE_BACKEND_URL
+
+  const gatewayUrl = getBackendUrl();
+  const { cloudinaryUrl: baseCloudinaryUrl } = getConfig()
+
   const [followStatus, setFollowStatus] = useState({}); 
   // const [currentPage, setCurrentPage] = useState(1); // Start with page 1
   // const [hasMore, setHasMore] = useState(true);
@@ -109,7 +114,6 @@ function MidTrending() {
           dispatch(setHasMore(false));
         } else {
           dispatch(setError("Failed to load trending posts. Please try again later."));
-          console.error('Error fetching trending posts:', error);
         }
       } finally {
         if (isInitial) {
@@ -305,7 +309,8 @@ const updateFollowStatus = (userId, status) => {
         formData.append('upload_preset', uploadPreset);
         formData.append('folder', folder);
     
-        const cloudinaryUrl = `${import.meta.env.VITE_CLOUDINARY_URL}/upload`;
+        // const cloudinaryUrl = `${import.meta.env.VITE_CLOUDINARY_URL}/upload`;
+        const cloudinaryUrl = `${baseCloudinaryUrl}/upload`; // Construct the upload URL
         let publicId = null;
     
         try {
@@ -345,7 +350,6 @@ const updateFollowStatus = (userId, status) => {
             toast.error(`Failed to upload ${fileType}.`);
           }
         } catch (error) {
-          console.error(`Error uploading ${fileType}:`, error);
           toast.error(`Error uploading ${fileType}.`);
     
           // Delete the file from Cloudinary if an error occurs after upload
@@ -354,7 +358,6 @@ const updateFollowStatus = (userId, status) => {
           }
         }
       } catch (error) {
-        console.error('Error during file save:', error);
         toast.error('Something went wrong while saving the file.');
       } finally {
         setIsVerifying(false);
@@ -400,7 +403,7 @@ const updateFollowStatus = (userId, status) => {
             <div className='w-10 h-10 bg-gray-300 rounded-full overflow-hidden flex items-center justify-center mr-4'>
               {imageUrl ? (
                 <img
-                  src={`${gatewayUrl}${imageUrl}`}
+                  src={`${imageUrl}`}
                   alt='Profile'
                   className='w-full h-full object-cover transition duration-300 ease-in-out'
                 />

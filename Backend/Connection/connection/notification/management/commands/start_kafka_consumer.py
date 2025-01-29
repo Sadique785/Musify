@@ -1,12 +1,14 @@
 from django.core.management.base import BaseCommand
 from notification.kafka_utils.consumer import KafkaConsumerService
+from django.conf import settings
+
 
 class Command(BaseCommand):
     help = 'Start Kafka Consumer for the Content Service'
 
     def handle(self, *args, **options):
         config = {
-            'bootstrap.servers':'localhost:9092',
+            'bootstrap.servers': settings.KAFKA_CONFIG['bootstrap.servers'],
             'group.id':'connection-consumer-group',
             'auto.offset.reset':'earliest'
         }

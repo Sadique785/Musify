@@ -34,6 +34,10 @@ RUN npm install -g serve --no-cache
 # Create non-root user and set permissions
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
+# Copy the entrypoint script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 # Copy the entire dist directory
 COPY --from=build --chown=appuser:appgroup /app/dist ./dist
 
@@ -42,8 +46,8 @@ RUN chown -R appuser:appgroup /app
 
 # Switch to non-root user
 USER appuser
-
+ 
 EXPOSE 3000
 
-# Serve from the dist directory
-CMD ["serve", "-s", "dist", "-l", "3000"]
+# Use the entrypoint script
+ENTRYPOINT ["/docker-entrypoint.sh"]

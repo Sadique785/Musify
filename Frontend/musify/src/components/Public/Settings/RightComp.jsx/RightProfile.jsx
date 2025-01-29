@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useContext } from "react";
 import { FaCamera, FaUser, FaTimes } from "react-icons/fa";
+import { useSelector } from "react-redux";
 import axiosInstance from "../../../../axios/authInterceptor"; // Adjust the path as needed
 import talents from "../../Elements/Talents";
 import genres from "../../Elements/Genres";
@@ -7,11 +8,13 @@ import toast, { Toaster } from 'react-hot-toast';
 import { useDispatch } from "react-redux";
 import { updateUsername } from "../../../../redux/auth/Slices/authSlice";
 import { ProfileContext } from "../../../../context/ProfileContext";
+import { getBackendUrl } from "../../../../services/config";
+import { CloudinaryImageUtils } from "../../Feed/utils/CloudinaryImageUtils";
+import LoadingModal from "../../Feed/utils/LoadingModal";
 
 function RightProfile() {
 
-
-    const backendUrl = import.meta.env.VITE_BACKEND_URL
+    const backendUrl = getBackendUrl();
     const {setProfile: setGlobalProfile} = useContext(ProfileContext)
     const [profile, setProfile] = useState({
         username: "",
@@ -28,6 +31,13 @@ function RightProfile() {
     const [selectedTalents, setSelectedTalents] = useState([]);
     const [initialProfile, setInitialProfile] = useState(null);
     const [selectedGenres, setSelectedGenres] = useState([]);
+    const [uploadState, setUploadState] = useState({
+        isLoading: false,
+        currentStep: null,
+        uploadProgress: 0
+    });
+    const loggedInUsername = useSelector((state) => state.auth.user?.username);
+
 
     const dispatch = useDispatch()
 
@@ -36,20 +46,17 @@ function RightProfile() {
 
     const handleTalentToggle = (talent) => {
         setProfile((prevProfile) => {
-            console.log(prevProfile, 'before'); // Log the correct profile state before update
             
             const updatedTalents = prevProfile.talents.includes(talent)
                 ? prevProfile.talents.filter((t) => t !== talent) // Remove if clicked again
                 : [...prevProfile.talents, talent]; // Add if clicked first time
     
-            console.log(updatedTalents, 'updated talents'); // Log updated talents array
             
             const newProfile = {
                 ...prevProfile,
                 talents: updatedTalents,
             };
     
-            console.log(newProfile, 'profile after update'); // This will show the updated profile
     
             return newProfile;
         });
@@ -57,20 +64,17 @@ function RightProfile() {
     
     const handleGenreToggle = (genre) => {
         setProfile((prevProfile) => {
-            console.log(prevProfile, 'before'); // Log the correct profile state before update
             
             const updatedGenres = prevProfile.genres.includes(genre)
                 ? prevProfile.genres.filter((g) => g !== genre) // Remove if clicked again
                 : [...prevProfile.genres, genre]; // Add if clicked first time
     
-            console.log(updatedGenres, 'updated genres'); // Log updated genres array
             
             const newProfile = {
                 ...prevProfile,
                 genres: updatedGenres,
             };
     
-            console.log(newProfile, 'profile after update'); // This will show the updated profile with new genres
     
             return newProfile;
         });
@@ -86,7 +90,6 @@ function RightProfile() {
             try {
                 const response = await axiosInstance.get("/auth/fetch-profile/");
                 if (response.status === 200) {
-                    console.log( 'Guys here is the data', response.data)
                     setProfile({
                         username: response.data.username,
                         imageUrl: response.data.image_url,
@@ -121,36 +124,72 @@ function RightProfile() {
         }
     };
 
+
     const handleSaveImage = async () => {
+        
         if (selectedImage) {
-            const formData = new FormData();
-            formData.append("image", selectedImage);
-
             try {
-                const response = await axiosInstance.put("/auth/change-profile-image/", formData, {
-                    headers: {
-                        "Content-Type": "multipart/form-data",
-                    },
+                setUploadState({
+                    isLoading: true,
+                    currentStep: 'verify',
+                    uploadProgress: 0
                 });
-
+    
+                const cloudinaryUtils = new CloudinaryImageUtils();
+                
+                await cloudinaryUtils.verifySession();
+                
+                setUploadState(prev => ({
+                    ...prev,
+                    currentStep: 'upload'
+                }));
+    
+                const cloudinaryResponse = await cloudinaryUtils.uploadImageToCloudinary(
+                    selectedImage,
+                    loggedInUsername,
+                    (progress) => {
+                        setUploadState(prev => ({
+                            ...prev,
+                            uploadProgress: progress
+                        }));
+                    }
+                );
+    
+                setUploadState(prev => ({
+                    ...prev,
+                    currentStep: 'save',
+                    uploadProgress: 100
+                }));
+    
+                const response = await axiosInstance.put("/auth/change-profile-image/", {
+                    image_url: cloudinaryResponse.secure_url
+                });
+    
                 if (response.status === 200) {
                     setProfile((prevProfile) => ({
                         ...prevProfile,
-                        imageUrl: response.data.image,
+                        imageUrl: response.data.image_url,
                     }));
+                    
                     setGlobalProfile((prevProfile) => ({
                         ...prevProfile,
-                        imageUrl: response.data.image,
-                    }))
+                        imageUrl: response.data.image_url,
+                    }));
+    
+                    toast.success('Profile image updated successfully');
+                    
+                    setUploadState(prev => ({ ...prev, isLoading: false }));
                     setTimeout(() => {
                         toggleModal();
                     }, 100);
                 }
             } catch (error) {
-                console.error("Error updating profile image:", error);
+                toast.error('Failed to update profile image');
+                setUploadState(prev => ({ ...prev, isLoading: false }));
             }
         }
     };
+
 
     const toggleModal = () => {
         setIsModalOpen(!isModalOpen);
@@ -160,7 +199,6 @@ function RightProfile() {
 
     const handleFieldChange = (e) => {
         const { name, value } = e.target;
-        console.log(`Field Name: ${name}, Value: ${value}`); // This logs the name and new value of the field
         setProfile((prevProfile) => ({
             ...prevProfile,
             [name]: value, // Updates the specific field
@@ -168,9 +206,6 @@ function RightProfile() {
     };
     
 
-    useEffect(() => {
-        console.log(profile, 'Updated Profile'); // Logs the latest state after update
-    }, [profile]);
     
 
     const hasChanges = () => {
@@ -192,7 +227,6 @@ function RightProfile() {
         }
 
 
-        console.log('Profile will update');
 
         const updatedProfileData = {
             username: profile.username,
@@ -207,11 +241,9 @@ function RightProfile() {
             const response = await axiosInstance.put("/auth/edit-profile/", updatedProfileData);
 
             if (response.status === 200) {
-                console.log( 'these datas are coming back',response.data)
 
                 
 
-                console.log("profile updated");
                 
                 
                 toast.success("Profile updated successfully!");
@@ -233,7 +265,6 @@ function RightProfile() {
                 toast.error("Failed to update profile. Please try again.");
             }
         } catch (error) {
-            console.error("Error updating profile:", error);
             toast.error("An error occurred while updating your profile.");
         }
 
@@ -243,81 +274,38 @@ function RightProfile() {
     return (
         <div className="p-6">
             <h1 className="text-2xl font-semibold mb-4">Profile Settings</h1>
-
-            {/* Profile Image Section */}
-            <div className="flex items-start mb-4">
-                <div className="relative w-1/4 h-[222px] mr-4">
-                    <div className="w-full h-full bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
-                        {profile.imageUrl ? (
-                            <img
-                                src={`${backendUrl}${profile.imageUrl}`}
-                                alt="Profile"
-                                className="w-full h-full object-cover"
-                            />
-                        ) : (
-                            <FaUser className="text-gray-500 text-6xl" />
-                        )}
-                    </div>
-                    <div
-                        className="absolute inset-0 bg-gray-800 bg-opacity-50 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300 cursor-pointer"
-                        onClick={toggleModal}
-                    >
-                        <FaCamera className="text-white text-xl" />
-                    </div>
-                </div>
-
-                {/* Image Modal */}
-                {isModalOpen && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white p-6 rounded-lg shadow-lg relative w-[300px]">
-                            <button
-                                className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
-                                onClick={toggleModal}
-                            >
-                                <FaTimes size={20} />
-                            </button>
-                            <h2 className="text-lg font-semibold text-center mb-4">Profile Image</h2>
-                            <div className="w-full h-[300px] flex items-center justify-center bg-gray-100 rounded-lg overflow-hidden">
-                                {imagePreview ? (
-                                    <img src={imagePreview} alt="Selected Preview" className="w-full h-full object-cover" />
-                                ) : profile.imageUrl ? (
+    
+            {/* Main Profile Section - Flex container that changes direction on mobile */}
+            <div className="flex flex-col md:flex-row items-start mb-4">
+                {/* Profile Image Section - Full width on mobile, 1/4 width on md and up */}
+                <div className="w-full md:w-1/4 mb-6 md:mb-0 md:mr-4">
+                    {/* Wrapper to maintain aspect ratio */}
+                    <div className="relative pt-[100%] w-full max-w-[222px] mx-auto">
+                        {/* Image container with absolute positioning to maintain roundness */}
+                        <div className="absolute inset-0">
+                            <div className="w-full h-full bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
+                                {profile.imageUrl ? (
                                     <img
-                                        src={`${backendUrl}${profile.imageUrl}`}
-                                        alt="Profile Preview"
+                                        src={`${profile.imageUrl}`}
+                                        alt="Profile"
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (
                                     <FaUser className="text-gray-500 text-6xl" />
                                 )}
                             </div>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleImageChange}
-                                className="hidden"
-                                id="file-input"
-                            />
-                            <label
-                                htmlFor="file-input"
-                                className="mt-4 bg-[#421b1b] flex items-center justify-center px-4 py-2 text-white rounded-lg hover:bg-[#5c2727] w-full cursor-pointer"
+                            <div
+                                className="absolute inset-0 bg-gray-800 bg-opacity-50 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300 cursor-pointer"
+                                onClick={toggleModal}
                             >
-                                <FaCamera className="mr-2" />
-                                Replace Image
-                            </label>
-                            {selectedImage && (
-                                <button
-                                    className="mt-4 bg-[#421b1b] flex items-center justify-center px-4 py-2 text-white rounded-lg hover:bg-[#5c2727] w-full"
-                                    onClick={handleSaveImage}
-                                >
-                                    Save
-                                </button>
-                            )}
+                                <FaCamera className="text-white text-xl" />
+                            </div>
                         </div>
                     </div>
-                )}
-
-                {/* Form Section */}
-                <div className="flex flex-col w-3/4">
+                </div>
+    
+                {/* Form Section - Full width on mobile, 3/4 width on md and up */}
+                <div className="w-full md:w-3/4">
                     <div className="mb-7">
                         <label className="block text-gray-700 font-semibold mb-1">Name</label>
                         <input
@@ -329,7 +317,7 @@ function RightProfile() {
                             className="w-full px-3 py-2 border rounded-lg"
                         />
                     </div>
-
+    
                     <div className="mb-7">
                         <label className="block text-gray-700 font-semibold mb-1">Location</label>
                         <input
@@ -341,114 +329,164 @@ function RightProfile() {
                             className="w-full px-3 py-2 border rounded-lg"
                         />
                     </div>
-
-                    <div className="flex mb-7">
-    <div className="w-1/4 mr-12">
-        <label className="block text-gray-700 font-semibold mb-1">Gender</label>
-        <div className="relative">
-            <select
-                name="gender" // Make sure this matches the key in your state
-                value={profile.gender || ""}
-                onChange={handleFieldChange}
-                className="w-full px-3 py-2 border rounded-full appearance-none bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-                <option value="">Select gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-            </select>
-            <svg
-                className="absolute top-1/2 right-3 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                aria-hidden="true"
-            >
-                <path
-                    fillRule="evenodd"
-                    d="M6.293 7.293a1 1 0 011.414 0L10 8.586l2.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                />
-            </svg>
-        </div>
-    </div>
-
-    <div className="w-2/4">
-        <label className="block text-gray-700 font-semibold mb-1">Date of Birth</label>
-        <input
-            type="date"
-            name="date_of_birth" // Match this to the key in the state
-            value={profile.date_of_birth || ""}
-            onChange={handleFieldChange}
-            className="w-full px-3 py-2 border rounded-lg"
-        />
-    </div>
-</div>
-
-
-
+    
+                    <div className="flex flex-col md:flex-row mb-7 gap-4">
+                        <div className="w-full md:w-1/4">
+                            <label className="block text-gray-700 font-semibold mb-1">Gender</label>
+                            <div className="relative">
+                                <select
+                                    name="gender"
+                                    value={profile.gender || ""}
+                                    onChange={handleFieldChange}
+                                    className="w-full px-3 py-2 border rounded-full appearance-none bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="">Select gender</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
+                                </select>
+                                <svg
+                                    className="absolute top-1/2 right-3 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        fillRule="evenodd"
+                                        d="M6.293 7.293a1 1 0 011.414 0L10 8.586l2.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                                        clipRule="evenodd"
+                                    />
+                                </svg>
+                            </div>
+                        </div>
+    
+                        <div className="w-full md:w-2/4">
+                            <label className="block text-gray-700 font-semibold mb-1">Date of Birth</label>
+                            <input
+                                type="date"
+                                name="date_of_birth"
+                                value={profile.date_of_birth || ""}
+                                onChange={handleFieldChange}
+                                className="w-full px-3 py-2 border rounded-lg"
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
-
+    
+            {/* Image Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-lg relative w-[300px]">
+                        <button
+                            className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+                            onClick={toggleModal}
+                        >
+                            <FaTimes size={20} />
+                        </button>
+                        <h2 className="text-lg font-semibold text-center mb-4">Profile Image</h2>
+                        <div className="w-full h-[300px] flex items-center justify-center bg-gray-100 rounded-lg overflow-hidden">
+                            {imagePreview ? (
+                                <img src={imagePreview} alt="Selected Preview" className="w-full h-full object-cover" />
+                            ) : profile.imageUrl ? (
+                                <img
+                                    src={`${profile.imageUrl}`}
+                                    alt="Profile Preview"
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <FaUser className="text-gray-500 text-6xl" />
+                            )}
+                        </div>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="hidden"
+                            id="file-input"
+                        />
+                        <label
+                            htmlFor="file-input"
+                            className="mt-4 bg-[#421b1b] flex items-center justify-center px-4 py-2 text-white rounded-lg hover:bg-[#5c2727] w-full cursor-pointer"
+                        >
+                            <FaCamera className="mr-2" />
+                            Replace Image
+                        </label>
+                        {selectedImage && (
+                            <button
+                                className="mt-4 bg-[#421b1b] flex items-center justify-center px-4 py-2 text-white rounded-lg hover:bg-[#5c2727] w-full"
+                                onClick={handleSaveImage}
+                            >
+                                Save
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+    
+            <LoadingModal 
+                isOpen={uploadState.isLoading}
+                currentStep={uploadState.currentStep}
+                uploadProgress={uploadState.uploadProgress}
+            />
+    
             <div className="mt-10">
-  <h1 className="text-2xl font-semibold mb-4">Music Interests</h1>
-  
-  {/* Talents Section */}
-  <h2 className="text-lg font-semibold mb-3">Talents</h2>
-  <div className="flex flex-wrap gap-4">
-    {talents.map((talent) => (
-      <div
-        key={talent.id}
-        onClick={() => handleTalentToggle(talent.name)}
-        className={`flex items-center cursor-pointer rounded-full px-3 py-1 text-sm font-bold ${
-          profile.talents.includes(talent.name)
-            ? 'bg-black text-white'
-            : 'bg-gray-200 text-black'
-        }`}
-      >
-        <div className="mr-2">{talent.icon}</div>
-        <span>{talent.name}</span>
-      </div>
-    ))}
-  </div>
-
-  {/* Favorite Genres Section */}
-  <h2 className="text-lg font-semibold mt-9 mb-6">Favorite Genres</h2>
-  <div className="flex flex-wrap gap-4">
-    {genres.map((genre) => (
-      <div
-            key={genre.id}
-            onClick={() => handleGenreToggle(genre.name)}
-            className={`flex items-center cursor-pointer rounded-full px-3 py-1 text-sm font-bold ${
-            profile.genres.includes(genre.name)
-                ? 'bg-black text-white'
-                : 'bg-gray-200 text-black'
-            }`}
-        >
-        <div className="mr-2">{genre.icon}</div>
-        <span>{genre.name}</span>
-      </div>
-    ))}
-  </div>
-</div>
-
-
-            
-                <button
+                <h1 className="text-2xl font-semibold mb-4">Music Interests</h1>
+                
+                {/* Talents Section */}
+                <h2 className="text-lg font-semibold mb-3">Talents</h2>
+                <div className="flex flex-wrap gap-4">
+                    {talents.map((talent) => (
+                        <div
+                            key={talent.id}
+                            onClick={() => handleTalentToggle(talent.name)}
+                            className={`flex items-center cursor-pointer rounded-full px-3 py-1 text-sm font-bold ${
+                                profile.talents.includes(talent.name)
+                                    ? 'bg-black text-white'
+                                    : 'bg-gray-200 text-black'
+                            }`}
+                        >
+                            <div className="mr-2">{talent.icon}</div>
+                            <span>{talent.name}</span>
+                        </div>
+                    ))}
+                </div>
+    
+                {/* Favorite Genres Section */}
+                <h2 className="text-lg font-semibold mt-9 mb-6">Favorite Genres</h2>
+                <div className="flex flex-wrap gap-4">
+                    {genres.map((genre) => (
+                        <div
+                            key={genre.id}
+                            onClick={() => handleGenreToggle(genre.name)}
+                            className={`flex items-center cursor-pointer rounded-full px-3 py-1 text-sm font-bold ${
+                                profile.genres.includes(genre.name)
+                                    ? 'bg-black text-white'
+                                    : 'bg-gray-200 text-black'
+                            }`}
+                        >
+                            <div className="mr-2">{genre.icon}</div>
+                            <span>{genre.name}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+    
+            <button
                 onClick={handleProfileUpdate}
                 className={`mt-6 px-6 py-2 font-semibold rounded-lg ${
                     hasChanges()
-                    ? 'bg-blue-500 text-white cursor-pointer'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        ? 'bg-blue-500 text-white cursor-pointer'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
                 disabled={!hasChanges()}
-                >
+            >
                 Update
-                </button>
-
-        <Toaster />
-
-    </div>
+            </button>
+    
+            <Toaster />
+        </div>
     );
 }
 

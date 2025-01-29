@@ -38,7 +38,7 @@ function AudioPost({ file_url, cover_image }) {
             });
 
             wavesurfer.on('error', (e) => {
-                console.error("Error loading audio:", e);
+                // console.error("Error loading audio:", e);
                 setIsLoading(false);
             });
 

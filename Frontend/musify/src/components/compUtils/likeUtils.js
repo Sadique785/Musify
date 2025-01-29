@@ -55,7 +55,7 @@ export const handleLikeToggle = async ({
         }
 
     } catch (error) {
-        console.error('Error toggling like:', error);
+        // console.error('Error toggling like:', error);
 
         // Rollback to the original state in case of API failure
         setIsLiked(originalIsLiked);

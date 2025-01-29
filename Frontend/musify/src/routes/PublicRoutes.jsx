@@ -2,13 +2,11 @@ import { Route, Routes } from "react-router-dom";
 import ResetWrapper from "../Wrappers/ResetWrapper";
 import Home from "../pages/Public/Home";
 import Login from "../pages/Public/Login";
-import About from "../pages/Public/About";
 import Profile from "../pages/User/Profile";
 import Signup from "../pages/Public/Signup";
 import ForgotPassword from "../pages/Public/ForgotPassword";
 import Feed from "../pages/User/Feed";
 import UserWrapper from "../Wrappers/UserWrapper";
-import Explore from "../pages/User/Explore";
 import Library from "../pages/User/Library";
 import Settings from "../pages/User/Settings";
 import NotFound from "../components/Public/NotFound";
@@ -38,7 +36,6 @@ function PublicRoutes() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Signup />} />
-            <Route path="/about" element={<About />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
 
             
@@ -54,7 +51,7 @@ function PublicRoutes() {
                 }
             >
                 <Route path="/feed" element={<Feed />} />
-                {/* <Route path="/profile" element={<Profile />} /> */}
+                <Route path="/profile" element={<Profile />} />
                 <Route path="/profile/:username" element={<Profile />} />
 
                 <Route path="/library" element={<Library />} /> 
@@ -62,7 +59,6 @@ function PublicRoutes() {
                 <Route path="/settings" element={<Settings />} /> 
                 <Route path="/error" element={<UserErrorPage />} />
                 <Route path="/chat" element={<ChatPage />} />
-                <Route path="/chat/:userId" element={<ChatPage />} />
 
 
             </Route>

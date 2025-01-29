@@ -7,7 +7,6 @@ function LibItem({ project }) {
 
   const handleDropdownClick = (e) => {
     e.stopPropagation(); // Prevent navigation when clicking dropdown
-    console.log('Dropdown clicked for project:', project?.title);
   };
 
   const formatDate = (dateString) => {

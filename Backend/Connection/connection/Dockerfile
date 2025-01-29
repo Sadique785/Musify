@@ -24,5 +24,5 @@ COPY . .
 # Expose port
 EXPOSE 8003
 
-# Run the application
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8003"]
+# Run the application using daphne
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8003", "-t", "30", "connection.asgi:application"]

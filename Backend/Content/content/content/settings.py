@@ -32,9 +32,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default='True', cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
 
 
 # Application definition
@@ -90,16 +90,20 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 #     }
 # }
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:8000",  # Gateway URL
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",
+#     "http://localhost:5173",
+#     "http://localhost:8000",  # Gateway URL
+# ]
 
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5173',  # Frontend
-    'http://localhost:8000',  # Gateway
-]
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='').split(',')
+
+# CSRF_TRUSTED_ORIGINS = [
+#     'http://localhost:5173',  # Frontend
+#     'http://localhost:8000',  # Gateway
+# ]
+
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='').split(',')
 
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_COOKIE_SECURE = False  # Set to True in production
@@ -258,6 +262,21 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+# KAFKA_CONFIG = {
+#     'bootstrap.servers': 'localhost:9092',
+# }
+
+# KAFKA_CONFIG = {
+#     'bootstrap.servers': config('KAFKA_BOOTSTRAP_SERVERS', default='localhost:9092'),
+#     'client.id': 'content_service',
+#     'error_cb': lambda err: print(f'Kafka error: {err}'),
+# }
+
+
 KAFKA_CONFIG = {
-    'bootstrap.servers': 'localhost:9092',
+    'bootstrap.servers': config('KAFKA_BOOTSTRAP_SERVERS', default='localhost:9092'),
+    'client.id': 'content_service',
+    'error_cb': lambda err: print(f'Kafka error: {err}'),
+    'group.id': config('KAFKA_GROUP_ID', default='content-consumer-group'),
+    'auto.offset.reset': config('KAFKA_AUTO_OFFSET_RESET', default='earliest'),
 }

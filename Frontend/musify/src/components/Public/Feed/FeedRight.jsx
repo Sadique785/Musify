@@ -17,7 +17,6 @@ const FeedRight = () => {
         setPeopleToFollow(response.data);
       } catch (err) {
         setError('Failed to fetch suggestions');
-        console.error('Error fetching unfollowed accounts:', err);
       } finally {
         setIsLoading(false);
       }

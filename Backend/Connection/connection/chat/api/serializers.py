@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from chat.models import ChatRoom, Message
+from chat.models import ChatRoomModel, Message
 from django.contrib.auth import get_user_model
 
 
@@ -16,7 +16,7 @@ class ChatRoomSerializer(serializers.ModelSerializer):
     unread_count = serializers.SerializerMethodField()
 
     class Meta:
-        model = ChatRoom
+        model = ChatRoomModel
         fields = ['id', 'participants', 'created_at', 'last_message', 'unread_count']
 
     def get_last_message(self, obj):

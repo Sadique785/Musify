@@ -17,7 +17,7 @@ function Home() {
   const token = useSelector((state) => state.auth.accessToken)
 
   useEffect(() => {
-    if (token === ''){
+    if (token){
       navigate('/feed');
     }
 

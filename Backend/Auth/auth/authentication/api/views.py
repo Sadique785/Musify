@@ -3,6 +3,8 @@ import requests
 from django.conf import settings
 from rest_framework import status
 from django.middleware import csrf
+from django.core.cache import cache
+from django.db.models import Prefetch
 from django.contrib.auth import logout
 from datetime import datetime, timezone
 from rest_framework.views import APIView
@@ -21,6 +23,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from authentication.kafka_utils.producer import KafkaProducerService
 import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -557,32 +560,68 @@ class FetchProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, username=None):
+
         try:
-            # Fetch the user based on the username if provided, else use the request user
+
+            profile_queryset = Profile.objects.select_related(
+                'user'
+            ).prefetch_related(
+                'talents',
+                'genres',
+                'friends',
+                'following',
+                'followers',
+                Prefetch(
+                    'user__blocked_users',
+                    queryset=CustomUser.objects.only('id', 'username'),
+                    to_attr='_blocked_users'
+                ),
+                Prefetch(
+                    'user__blocked_by',
+                    queryset=CustomUser.objects.only('id', 'username'),
+                    to_attr='_blocked_by'
+                )
+            )
+
+            # Get profile based on username or request user
             if username:
-                user = CustomUser.objects.filter(username=username).first()
-                if not user:
-                    return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+                profile = profile_queryset.get(user__username=username)
             else:
-                user = request.user
+                profile = profile_queryset.get(user=request.user)
 
-            is_blocked = user in request.user.blocked_users.all() or request.user in user.blocked_users.all()
+            # Check if user is blocked using prefetched data
+            is_blocked = (
+                request.user.id in [u.id for u in getattr(profile.user, '_blocked_users', [])] or
+                profile.user.id in [u.id for u in getattr(request.user, '_blocked_users', [])]
+            )
 
+            # Add counts as attributes to avoid additional queries in serializer
+            profile.following_count = profile.following.count()
+            profile.followers_count = profile.followers.count()
+            profile.friends_count = profile.friends.count()
 
-            # Get the profile and serialize it
-            profile = Profile.objects.get(user=user)
-            serializer = ProfileViewSerializer(profile, context={"request": request, "is_blocked": is_blocked})
-            print("Serialized image_url:", serializer.data.get('image_url'))  # Debugging line
+            serializer = ProfileViewSerializer(
+                profile,
+                context={
+                    "request": request,
+                    "is_blocked": is_blocked
+                }
+            )
+            print(serializer.data)
 
-
-            # Return the serialized data
+            
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         except Profile.DoesNotExist:
-            return Response({"error": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Profile not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
     
 class EditProfileView(APIView):
     permission_classes = [IsAuthenticated]
@@ -617,13 +656,56 @@ class EditProfileView(APIView):
             return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
     
 
+# class ChangeProfileImageView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def put(self, request, *args, **kwargs):
+#         print('PUT request received for changing profile image')
+#         print('Request headers:', request.headers)
+#         print('Request files:', request.FILES)
+
+#         user = request.user
+#         print('Authenticated user:', user)
+
+#         profile = get_object_or_404(Profile, user=user)
+#         print('Profile found:', profile.id)
+
+#         if 'image' in request.FILES:
+#             print('First Image  file found', profile.image.url)
+#             profile.image = request.FILES['image']
+#             profile.save()
+#             print('second  Image  file found', profile.image.url)
+
+#             print('Profile image updated')
+
+#             request.user.refresh_from_db()
+#             new_user = request.user
+
+#             updated_image_data = {
+#                 'id': new_user.id,
+#                 'username': new_user.username,
+#                 'email': new_user.email,
+#                 'image_url':profile.image.url if profile.image else None
+#             }
+
+#             kafka_producer = KafkaProducerService(config={})
+#             kafka_producer.send_user_updation_message(updated_image_data)
+
+
+#             serializer = ProfileImageSerializer(profile)
+#             print('Serializer data:', serializer.data)
+#             return Response(serializer.data, status=status.HTTP_200_OK)
+#         else:
+#             print('No image file found')
+#             return Response({"error": "No image provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class ChangeProfileImageView(APIView):
     permission_classes = [IsAuthenticated]
 
     def put(self, request, *args, **kwargs):
         print('PUT request received for changing profile image')
-        print('Request headers:', request.headers)
-        print('Request files:', request.FILES)
+        print('Request data:', request.data)
 
         user = request.user
         print('Authenticated user:', user)
@@ -631,13 +713,15 @@ class ChangeProfileImageView(APIView):
         profile = get_object_or_404(Profile, user=user)
         print('Profile found:', profile.id)
 
-        if 'image' in request.FILES:
-            print('First Image  file found', profile.image.url)
-            profile.image = request.FILES['image']
+        # Check if image_url is provided in request data
+        if 'image_url' in request.data:
+            print('Image URL found:', request.data['image_url'])
+            
+            # Update the image_url field
+            profile.image_url = request.data['image_url']
+            # Optionally clear the old image field if you want
+            # profile.image = None
             profile.save()
-            print('second  Image  file found', profile.image.url)
-
-            print('Profile image updated')
 
             request.user.refresh_from_db()
             new_user = request.user
@@ -646,22 +730,19 @@ class ChangeProfileImageView(APIView):
                 'id': new_user.id,
                 'username': new_user.username,
                 'email': new_user.email,
-                'image_url':profile.image.url if profile.image else None
+                'image_url': profile.image_url or (profile.image.url if profile.image else None)
             }
 
+            # Send Kafka message
             kafka_producer = KafkaProducerService(config={})
             kafka_producer.send_user_updation_message(updated_image_data)
-
 
             serializer = ProfileImageSerializer(profile)
             print('Serializer data:', serializer.data)
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            print('No image file found')
-            return Response({"error": "No image provided"}, status=status.HTTP_400_BAD_REQUEST)
-
-
-
+            print('No image URL provided')
+            return Response({"error": "No image URL provided"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class BlockUserView(APIView):

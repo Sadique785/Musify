@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: django-migrations-auth
+spec:
+  template:
+    metadata:
+      name: django-migrations-auth-pod
+      labels:
+        app: django-migrations-auth
+    spec:
+      containers:
+      - name: auth-service
+        image: vssadique123/auth_service:latest
+        command: ['python', 'manage.py', 'migrate']
+        envFrom:
+        - configMapRef:
+            name: auth-service-configmap
+        - secretRef:
+            name: auth-service-secret
+      restartPolicy: Never
+  backoffLimit: 5

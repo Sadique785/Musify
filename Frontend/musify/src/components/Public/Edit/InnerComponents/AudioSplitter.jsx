@@ -136,7 +136,6 @@ const AudioSplitter = ({ fileUrl, isOpen, onClose , trackData, segment}) => {
       
       const base64Part1 = await blobToBase64(blob1);
       const base64Part2 = await blobToBase64(blob2);
-      console.log('Message from AudioSplitter TrackData', trackData)
       // const segmentToSplit = trackData.segments.find(s => 
       //   splitPoint >= s.startTime && splitPoint <= s.endTime
       // );
@@ -144,8 +143,7 @@ const AudioSplitter = ({ fileUrl, isOpen, onClose , trackData, segment}) => {
       if (!segment) {
         throw new Error('Could not find segment to split');
       } 
-      console.log("Message from AudioSplitter splitPoint - segment.startTime", splitPoint - segment.startTime) 
-      console.log("Message from AudioSplitter", segment) 
+ 
       dispatch(splitSegment({
         trackId: trackData.id,
         segmentIndex: segment.segmentIndex,
@@ -156,7 +154,6 @@ const AudioSplitter = ({ fileUrl, isOpen, onClose , trackData, segment}) => {
   
       onClose();
     } catch (error) {
-      console.error('Error splitting audio:', error);
       alert('Error splitting the audio file. Please try again.');
     }
   };

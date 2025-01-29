@@ -24,7 +24,7 @@ const GetStarted = () => {
     <img 
     src="cover/cover1.png"
      alt="Get Started"
-     className='object-cover w-[620px] h-[580px] mt-[210px] ml-[247px] '
+     className='object-cover w-[620px] h-[580px] mt-[210px] ml-[150px] '
       />
 
     </div>

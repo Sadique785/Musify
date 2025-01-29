@@ -25,7 +25,6 @@ const UserProfileProvider = ({ children, username }) => {
       try {
         const response = await axiosInstance.get(username ? `/auth/fetch-profile/${username}/` : `/auth/fetch-profile/`);
         if (response.status === 200) {
-          console.log('Data from Provider', response.data);
 
           const blocked = response.data.is_blocked || false;
           setIsBlocked(blocked);

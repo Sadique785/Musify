@@ -3,14 +3,15 @@ import { User, CheckCheck } from 'lucide-react';
 
 function ChatUserItem({ user, onSelect, isSelected,chatRoom, unreadCount, backendUrl }) {
 
+
     const formatTimestamp = (timestamp) => {
         if (!timestamp) return '';
         const date = new Date(timestamp);
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
     };
 
-    const lastMessage = chatRoom.last_message?.content || 'No messages yet';
-    const lastMessageTime = formatTimestamp(chatRoom.last_message?.timestamp);
+    const lastMessage = chatRoom.message?.content || 'No messages yet';
+    const lastMessageTime = formatTimestamp(chatRoom.message?.timestamp);
     
     return (
         <div
@@ -25,7 +26,7 @@ function ChatUserItem({ user, onSelect, isSelected,chatRoom, unreadCount, backen
                 border-b 
                 border-gray-200 
                 hover:bg-gray-50
-                ${isSelected ? 'border-l-4 border-l-[#4b4747]' : ''}
+                ${isSelected ? 'border-l-4 bg-white border-l-[#4b4747]' : ''}
             `}
             onClick={() => onSelect(user)}
         >

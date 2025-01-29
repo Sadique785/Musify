@@ -12,7 +12,8 @@ import MediaDisplay from './InnerComponents/MediaDisplay';
 import {useSelector} from 'react-redux';
 import { useParams } from 'react-router-dom';
 import LoadingPlaceholder from '../../../pages/Admin/Loaders/LoadingPlaceholder';
-// import { usePostModal } from '../../../context/PostModalContext';
+import { getBackendUrl } from '../../../services/config';
+import { getConfig } from '../../../config';
 
 function ProfileMid() {
 
@@ -21,9 +22,10 @@ function ProfileMid() {
   const loggedInUsername = useSelector((state) => state.auth.user?.username)
   const { username } = useParams();
   const isOwnProfile = loggedInUsername === username;   
+  const { cloudinaryUrl: baseCloudinaryUrl } = getConfig(); 
 
+  const gatewayUrl = getBackendUrl();
   
-  const gatewayUrl = import.meta.env.VITE_BACKEND_URL
   const [mediaData, setMediaData] = useState([]);
   const [loading, setLoading] = useState(true); 
 
@@ -36,7 +38,6 @@ function ProfileMid() {
   const [uploadCount, setUploadCount] = useState(0);
   const [description, setDescription] = useState('');
 
-  // const { openPostModal } = usePostModal();
 
 
   useEffect(() => {
@@ -48,7 +49,7 @@ function ProfileMid() {
           : `/content/uploads/${username}/`;
 
         const response = await axiosInstance.get(url);
-        setPostCount(response?.data?.results[0].post_count)
+        setPostCount(response?.data?.results[0]?.post_count || 0)
         setMediaData(response.data.results);
       } catch (error) {
         console.error('Error fetching media data', error);
@@ -127,8 +128,12 @@ function ProfileMid() {
         formData.append('file', file);
         formData.append('upload_preset', uploadPreset);
         formData.append('folder', folder);
-    
-        const cloudinaryUrl = `${import.meta.env.VITE_CLOUDINARY_URL}/upload`;
+        
+
+        // const cloudinaryUrl = `${import.meta.env.VITE_CLOUDINARY_URL}/upload`;
+        const cloudinaryUrl = `${baseCloudinaryUrl}/upload`; // Construct the upload URL
+        
+
         let publicId = null;
     
         try {
@@ -169,7 +174,6 @@ function ProfileMid() {
             toast.error(`Failed to upload ${fileType}.`);
           }
         } catch (error) {
-          console.error(`Error uploading ${fileType}:`, error);
           toast.error(`Error uploading ${fileType}.`);
     
           // Delete the file from Cloudinary if an error occurs after upload
@@ -178,7 +182,6 @@ function ProfileMid() {
           }
         }
       } catch (error) {
-        console.error('Error during file save:', error);
         toast.error('Something went wrong while saving the file.');
       } finally {
         setIsVerifying(false);

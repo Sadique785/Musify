@@ -10,7 +10,6 @@ function FeedLeft() {
     const selectedContent = useSelector((state) => state.content.selectedContent);
 
     const handleContentChange = (content) => {
-        console.log(content);
         
         dispatch(setSelectedContent(content));
     }

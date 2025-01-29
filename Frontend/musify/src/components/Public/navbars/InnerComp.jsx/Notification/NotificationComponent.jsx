@@ -8,11 +8,6 @@ import { useState } from 'react';
 const NotificationComponent = ({ userId, isOpen, onClose }) => {
   const navigate = useNavigate();
   const { notifications, isLoading } = useNotificationSocket(userId);
-  console.log('notifications',notifications)
-
-
-
-
 
 
   const handleNavigateToProfile = (username) => {
@@ -53,7 +48,9 @@ const NotificationComponent = ({ userId, isOpen, onClose }) => {
 
   return (
     <div className={`
-      fixed top-0 right-0 h-full w-1/4 bg-white shadow-lg 
+      fixed top-0 right-0 h-full 
+      w-3/5 md:w-1/2 lg:w-1/4
+       bg-white shadow-lg 
       transform transition-transform duration-300 ease-in-out 
       ${isOpen ? 'translate-x-0' : 'translate-x-full'}
       z-[100] overflow-y-auto

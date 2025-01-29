@@ -7,7 +7,6 @@ import DraggableTrack from './DraggableTrack';
 
 const RightContent = forwardRef(({ zoomLevel, onScroll, zoomedPositions,setZoomedPositions   }, ref) => {
   const tracks = useSelector(selectTracks);
-  console.log('track', tracks )
   const contentRef = useRef(null);
   const dispatch = useDispatch();
   const [audioData, setAudioData] = useState({});
@@ -56,7 +55,6 @@ const RightContent = forwardRef(({ zoomLevel, onScroll, zoomedPositions,setZoome
     const totalDuration = trackWidths[trackId] ? trackWidths[trackId] / (zoomLevel * 50) : 0;
     const proportion = clickX / trackWidth;
     const clickedDuration = proportion * totalDuration;
-    console.log("Track:", trackId, "Segment:", segmentId, "Duration:", clickedDuration);
   };
 
   // const handleSegmentDrag = (trackId, segmentId, newPosition) => {

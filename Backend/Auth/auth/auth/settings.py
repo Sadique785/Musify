@@ -31,9 +31,9 @@ from decouple import config
 SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default='False', cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
 
 # SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 # SESSION_CACHE_ALIAS = 'default'
@@ -97,17 +97,21 @@ SESSION_COOKIE_SECURE = False  # Should be True if using HTTPS
 SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access
 SESSION_COOKIE_SAMESITE = 'Lax'
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:8000",  # Gateway URL
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",
+#     "http://localhost:5173",
+#     "http://localhost:8000",  # Gateway URL
+# ]
 
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5173',  # Frontend
-    'http://localhost:8000',  # Gateway
-]
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='').split(',')
 
+# CSRF_TRUSTED_ORIGINS = [
+#     'http://localhost:5173',  # Frontend
+#     'http://localhost:8000',  # Gateway
+# ]
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='').split(',')
+
+CSRF_COOKIE_DOMAIN = config('CSRF_COOKIE_DOMAIN', default='')
 
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_COOKIE_SECURE = False  # Set to True in production
@@ -285,7 +289,13 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True)
 
 
 
-KAFKA_CONFIG = {
-    'bootstrap.servers': 'localhost:9092',  # Adjust as needed
-}
+# KAFKA_CONFIG = {
+#     'bootstrap.servers': 'localhost:9092',  
+# }
 
+
+KAFKA_CONFIG = {
+    'bootstrap.servers': config('KAFKA_BOOTSTRAP_SERVERS', default='localhost:9092'),
+    'client.id': 'auth_service',
+    'error_cb': lambda err: print(f'Kafka error: {err}'),
+}

@@ -30,7 +30,6 @@ const UploadComponent = () => {
                 formData
             );
             setUrl(response.data.secure_url);
-            console.log(`${fileType} uploaded successfully:`, response.data.secure_url);
             
         } catch (error) {
             console.error(`Error uploading ${fileType}:`, error);

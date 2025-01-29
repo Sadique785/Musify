@@ -41,7 +41,6 @@ function ForgotPassword() {
         setEmailError('Failed to send OTP. Please try again.');
       }
     } catch (error) {
-      console.error('Error sending OTP:', error);
       setEmailError('An error occurred while sending OTP.');
     }
   };
@@ -83,7 +82,6 @@ function ForgotPassword() {
         setOtpError('Invalid OTP or failed to reset password.');
       }
     } catch (error) {
-      console.error('Error resetting password:', error);
       setOtpError('An error occurred while resetting password.');
     }
   };

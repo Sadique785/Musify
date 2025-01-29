@@ -10,6 +10,9 @@ import talents from '../Elements/Talents'
 import genres from '../Elements/Genres'
 import ProfileFollowButton from './InnerComponents/ProfileFollowButton';
 import ProfileUnblockButton from './InnerComponents/ProfileUnblockButton';
+import { getBackendUrl } from '../../../services/config';
+import { CloudinaryImageUtils } from '../Feed/utils/CloudinaryImageUtils';
+import LoadingModal from '../Feed/utils/LoadingModal';
 
 
 function ProfileLeft() {
@@ -18,7 +21,7 @@ function ProfileLeft() {
   const loggedInUsername = useSelector((state) => state.auth.user?.username)
   const navigate = useNavigate();
   const { username } = useParams(); // Assume params provide the username of the viewed profile
-  const gatewayUrl = import.meta.env.VITE_BACKEND_URL
+  const gatewayUrl = getBackendUrl();
   const [isModalOpen, setIsModalOpen] = useState(false);  // Modal initially closed
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -26,6 +29,11 @@ function ProfileLeft() {
   const dropdownRef = useRef(null);
 
   const isOwnProfile = loggedInUsername === username; 
+  const [uploadState, setUploadState] = useState({
+    isLoading: false,
+    currentStep: 'verify',
+    uploadProgress: 0
+  });
 
 
 
@@ -51,46 +59,75 @@ function ProfileLeft() {
     if (file) {
       setSelectedImage(file);
       
-      console.log(URL.createObjectURL(file), 'hereere')
       setImagePreview(URL.createObjectURL(file));  // Preview the selected image
     }
   };
 
+
+
   const handleSaveImage = async () => {
     if (selectedImage) {
-      const formData = new FormData();
-      formData.append('image', selectedImage);
-
       try {
-        const response = await axiosInstance.put('/auth/change-profile-image/', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+        setUploadState({
+          isLoading: true,
+          currentStep: 'verify',
+          uploadProgress: 0
         });
-
+  
+        const cloudinaryUtils = new CloudinaryImageUtils();
+        
+        await cloudinaryUtils.verifySession();
+        
+        setUploadState(prev => ({
+          ...prev,
+          currentStep: 'upload'
+        }));
+  
+        const cloudinaryResponse = await cloudinaryUtils.uploadImageToCloudinary(
+          selectedImage,
+          loggedInUsername,
+          (progress) => {
+            setUploadState(prev => ({
+              ...prev,
+              uploadProgress: progress
+            }));
+          }
+        );
+  
+        setUploadState(prev => ({
+          ...prev,
+          currentStep: 'save',
+          uploadProgress: 100
+        }));
+  
+        const response = await axiosInstance.put('/auth/change-profile-image/', {
+          image_url: cloudinaryResponse.secure_url
+        });
+  
         if (response.status === 200) {
-          console.log('Image uploaded successfully:', response.data.image);
-
-          // Update the profile state with the new image URL
           setUserProfile((prevProfile) => ({
             ...prevProfile,
-            imageUrl: response.data.image,
+            imageUrl: response.data.image_url,
           }));
+          
           setGlobalProfile((prevProfile) => ({
             ...prevProfile,
-            imageUrl: response.data.image,
+            imageUrl: response.data.image_url,
           }));
-
-          // Delay closing the modal slightly to ensure state updates are reflected
-          setTimeout(() => {
-            toggleModal();  // Close modal after updating the state
-          }, 100);  // Slight delay to ensure image updates
+  
+          toast.success('Profile image updated successfully');
+          
+          // Close all modals
+          setUploadState(prev => ({ ...prev, isLoading: false }));
+          toggleModal();
         }
       } catch (error) {
-        console.error('Error updating profile image:', error);
+        toast.error('Failed to update profile image');
+        setUploadState(prev => ({ ...prev, isLoading: false }));
       }
     }
   };
+
 
   const handleUnblockCallback = () => {
     setUserProfile((prevProfile) => ({
@@ -131,7 +168,6 @@ function ProfileLeft() {
     } catch (error) {
         // Handle errors and show failure toast
         toast.error('Error blocking user');
-        console.error('Error blocking user:', error);
     }
 };
 
@@ -148,7 +184,7 @@ function ProfileLeft() {
             <div className="w-full h-full bg-gray-400 animate-pulse rounded-full"></div>
           ) : userProfile.imageUrl ? (
             <img
-              src={`${gatewayUrl}${userProfile.imageUrl}`}
+              src={`${userProfile.imageUrl}`}
               alt="Profile"
               className="w-full h-full object-cover transition duration-300 ease-in-out"
             />
@@ -166,89 +202,89 @@ function ProfileLeft() {
 
       </div>
   
-{/* Username */}
-{loading ? (
-  <div className="h-6 w-24 bg-gray-400 rounded animate-pulse mx-auto mt-4"></div>
-) : (
-  <div className="flex items-center justify-center mt-4 relative"> 
-    <h2 className="text-xl font-semibold text-center">{userProfile.username}</h2>
-    {!isBlocked && !isOwnProfile && (
-      <button
-        onClick={() => setDropdownOpen((prev) => !prev)}
-        className="ml-4 text-gray-500 hover:text-gray-700"  
-      >
-        <FaEllipsisH />
-      </button>
-    )}
+          {/* Username */}
+          {loading ? (
+            <div className="h-6 w-24 bg-gray-400 rounded animate-pulse mx-auto mt-4"></div>
+          ) : (
+            <div className="flex items-center justify-center mt-4 relative"> 
+              <h2 className="text-xl font-semibold text-center">{userProfile.username}</h2>
+              {!isBlocked && !isOwnProfile && (
+                <button
+                  onClick={() => setDropdownOpen((prev) => !prev)}
+                  className="ml-4 text-gray-500 hover:text-gray-700"  
+                >
+                  <FaEllipsisH />
+                </button>
+              )}
 
-    {/* Dropdown Menu */}
-    {dropdownOpen && !isBlocked && (
-      <div
-        ref={dropdownRef}
-        className="absolute top-full mt-2 bg-white shadow-lg rounded-lg w-40 py-2 z-50"
-      >
-        <button
-          onClick={handleBlock}
-          className="w-full text-left px-4 py-2 text-red-500 hover:bg-gray-200 rounded-lg"
-        >
-          Block
-        </button>
-      </div>
-    )}
-  </div>
-)}
-
-
+              {/* Dropdown Menu */}
+              {dropdownOpen && !isBlocked && (
+                <div
+                  ref={dropdownRef}
+                  className="absolute top-full mt-2 bg-white shadow-lg rounded-lg w-40 py-2 z-50"
+                >
+                  <button
+                    onClick={handleBlock}
+                    className="w-full text-left px-4 py-2 text-red-500 hover:bg-gray-200 rounded-lg"
+                  >
+                    Block
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
 
 
 
-{/* Conditional Buttons */}
-{isOwnProfile ? (
-  <button
-    onClick={handleEditProfile}
-    className="mt-4 bg-[#421b1b] flex items-center justify-center px-4 py-2 text-white rounded-lg hover:bg-[#5c2727]"
-  >
-    <FaEdit className="mr-2" />
-    Edit Profile
-  </button>
-) : (
-  <div className="flex space-x-4 mt-4">
-    {loading ? (
-      // Placeholder during loading
-      <div className="w-[200px] h-10 bg-gray-200 rounded-lg animate-pulse"></div>
-    ) : isBlocked ? (
-      // Unblock button if user is blocked
-      <ProfileUnblockButton userId={userProfile.userId} onUnblock={handleUnblockCallback} />
-    ) : (
-      // Chat and Follow buttons when not blocked
-      <>
-    <button 
-      onClick={() => {
-        navigate(`/chat/${userProfile.userId}`, {
-          state: {
-            user: {
-              id: userProfile.userId,
-              username: userProfile.username,
-              profile_image: userProfile.imageUrl
-            }
-          }
-        });
-      }}
-      className="bg-gray-800 hover:bg-gray-700 transition-colors duration-200 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-    >
-      <FaComments className="mr-2" />
-      <span>Chat</span>
-    </button>
-        <ProfileFollowButton 
-          userId={userProfile.userId} 
-          followStatus={userProfile.followStatus} 
-          loading={loading}
-        />
-      </>
-    )}
-  </div>
-)}
+
+
+          {/* Conditional Buttons */}
+          {isOwnProfile ? (
+            <button
+              onClick={handleEditProfile}
+              className="mt-4 bg-[#421b1b] flex items-center justify-center px-4 py-2 text-white rounded-lg hover:bg-[#5c2727]"
+            >
+              <FaEdit className="mr-2" />
+              Edit Profile
+            </button>
+          ) : (
+            <div className="flex space-x-4 mt-4">
+              {loading ? (
+                // Placeholder during loading
+                <div className="w-[200px] h-10 bg-gray-200 rounded-lg animate-pulse"></div>
+              ) : isBlocked ? (
+                // Unblock button if user is blocked
+                <ProfileUnblockButton userId={userProfile.userId} onUnblock={handleUnblockCallback} />
+              ) : (
+                // Chat and Follow buttons when not blocked
+                <>
+              <button 
+                onClick={() => {
+                  navigate(`/chat`, {
+                    state: {
+                      user: {
+                        id: userProfile.userId,
+                        username: userProfile.username,
+                        profile_image: userProfile.imageUrl
+                      }
+                    }
+                  });
+                }}
+                className="bg-gray-800 hover:bg-gray-700 transition-colors duration-200 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+              >
+                <FaComments className="mr-2" />
+                <span>Chat</span>
+              </button>
+                  <ProfileFollowButton 
+                    userId={userProfile.userId} 
+                    followStatus={userProfile.followStatus} 
+                    loading={loading}
+                  />
+                </>
+              )}
+            </div>
+          )}
 
   
       {/* Modal for image selection */}
@@ -273,7 +309,7 @@ function ProfileLeft() {
                 />
               ) : userProfile.imageUrl ? (
                 <img
-                  src={`${gatewayUrl}${userProfile.imageUrl}`}
+                  src={`${userProfile.imageUrl}`}
                   alt="Profile Preview"
                   className="w-full h-full object-cover"
                 />
@@ -313,6 +349,13 @@ function ProfileLeft() {
           </div>
         </div>
       )}
+
+
+      <LoadingModal 
+            isOpen={uploadState.isLoading}
+            currentStep={uploadState.currentStep}
+            uploadProgress={uploadState.uploadProgress}
+          />
   
       <div className="flex justify-around items-center w-full mt-6">
         <div className="text-center">

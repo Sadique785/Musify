@@ -23,7 +23,6 @@ const NotificationItem = ({ notification, onNavigateToProfile, onCloseNotificati
       }
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Error accepting follow request');
-      console.error('Error accepting follow request:', error);
     }
   };
 
