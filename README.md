@@ -4,7 +4,7 @@
 
 Musify is a web application designed to bring music lovers together. It allows users to upload, edit, and share audio content, interact via real-time chat, and stream music seamlessly. Built with a microservices architecture, Musify ensures scalability and high performance.
 
-**Live Site:** Musify
+**Live Site:** [Musify](https://musify.sadique.live)
 
 ## Features
 
@@ -186,4 +186,4 @@ Want to contribute? Follow these steps:
 ## Contact
 
 For any queries, feel free to reach out!
-Website: Musify
+Website: [Musify](https://musify.sadique.live)
