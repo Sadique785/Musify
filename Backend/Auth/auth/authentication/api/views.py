@@ -294,7 +294,7 @@ class LoginView(APIView):
             if user.is_active:
                 tokens = generate_token_with_claims(user)
                 csrf_token = csrf.get_token(request)
-
+    
                 request.session['user_id'] =  user.id
                 response_data = {
                     "success":True,
